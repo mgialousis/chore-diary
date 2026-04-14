@@ -30,19 +30,33 @@ function getErrorDetails(error: unknown) {
   return details;
 }
 
+function getDatabaseHost() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
+
+  try {
+    return new URL(url).host;
+  } catch {
+    return url.split("@")[1]?.split("/")[0] ?? null;
+  }
+}
+
 export async function getCurrentUser() {
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
 
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
   const displayName = getDefaultDisplayName(clerkUser);
+  let stage = "start";
 
   try {
+    stage = "findUnique(clerkId)";
     const existingByClerkId = await db.user.findUnique({
       where: { clerkId: clerkUser.id },
     });
 
     if (existingByClerkId) {
+      stage = "update(existingByClerkId)";
       return db.user.update({
         where: { id: existingByClerkId.id },
         data: {
@@ -53,11 +67,13 @@ export async function getCurrentUser() {
     }
 
     if (email) {
+      stage = "findUnique(email)";
       const existingByEmail = await db.user.findUnique({
         where: { email },
       });
 
       if (existingByEmail) {
+        stage = "update(existingByEmail)";
         return db.user.update({
           where: { id: existingByEmail.id },
           data: {
@@ -69,6 +85,7 @@ export async function getCurrentUser() {
       }
     }
 
+    stage = "create";
     return db.user.create({
       data: {
         clerkId: clerkUser.id,
@@ -78,11 +95,15 @@ export async function getCurrentUser() {
       },
     });
   } catch (error) {
-    console.error("[auth] getCurrentUser failed", {
-      clerkId: clerkUser.id,
-      email,
-      ...getErrorDetails(error),
-    });
+    console.error(
+      `[auth] getCurrentUser failed ${JSON.stringify({
+        stage,
+        clerkId: clerkUser.id,
+        email,
+        databaseHost: getDatabaseHost(),
+        ...getErrorDetails(error),
+      })}`,
+    );
     throw error;
   }
 }
