@@ -105,6 +105,8 @@ export default async function HistoryPage({
       <ActivityFeed
         activities={visibleActivities}
         filter={filter}
+        offset={offset}
+        pageSize={PAGE_SIZE}
         nextOffset={nextOffset}
       />
     </div>

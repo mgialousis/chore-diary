@@ -71,6 +71,22 @@ function inferGroceryCategory(normalizedName: string): GroceryCategory {
   return "OTHER";
 }
 
+const aggregatedIngredientSchema = z.object({
+  name: z.string().min(1).max(200),
+  normalizedName: z.string().min(1).max(200),
+  quantity: z.number().positive(),
+  unit: z.string().nullable(),
+  category: z.enum([
+    "VEGETABLES", "FRUIT", "DAIRY", "MEAT_FISH", "PANTRY",
+    "FROZEN", "CLEANING_SUPPLIES", "BATHROOM_SUPPLIES", "OTHER",
+  ]),
+  sources: z.array(z.string()).default([]),
+});
+
+function getAggregatedIngredientSourceId(normalizedName: string, unit: string | null) {
+  return `${normalizedName}__${unit ?? "piece"}`;
+}
+
 // ─── Generate grocery list (dynamic, not stored) ─────────────
 
 export async function generateGroceryList(
@@ -94,6 +110,21 @@ export async function generateGroceryList(
       },
     },
   });
+
+  const trackedMealPlanItems = await db.groceryItem.findMany({
+    where: {
+      householdId: household.id,
+      sourceType: "MEAL_PLAN",
+      status: { in: ["NEEDED", "BOUGHT"] },
+    },
+    select: { sourceId: true },
+  });
+
+  const trackedSourceIds = new Set(
+    trackedMealPlanItems
+      .map((item) => item.sourceId)
+      .filter((sourceId): sourceId is string => Boolean(sourceId)),
+  );
 
   const aggregated = new Map<string, AggregatedIngredient>();
 
@@ -123,7 +154,9 @@ export async function generateGroceryList(
 
   return Array.from(aggregated.values()).sort(
     (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
-  );
+  ).filter((item) => !trackedSourceIds.has(
+    getAggregatedIngredientSourceId(item.normalizedName, item.unit),
+  ));
 }
 
 // ─── Manual grocery item schema ──────────────────────────────
@@ -179,9 +212,17 @@ export async function toggleGroceryItemChecked(itemId: string) {
   });
   if (!item) return { error: "Item not found" };
 
+  const nextChecked = !item.checked;
+  const nextStatus = item.status === "BOUGHT" && !nextChecked
+    ? "NEEDED"
+    : item.status;
+
   await db.groceryItem.update({
     where: { id: itemId },
-    data: { checked: !item.checked },
+    data: {
+      checked: nextChecked,
+      status: nextStatus,
+    },
   });
 
   revalidatePath("/groceries");
@@ -195,6 +236,67 @@ export async function markGroceryBought(itemId: string) {
     where: { id: itemId, householdId: household.id },
     data: { status: "BOUGHT", checked: true },
   });
+
+  await logActivity({
+    householdId: household.id,
+    userId: user.id,
+    eventType: "GROCERY_BOUGHT",
+    entityType: "grocery",
+    entityId: item.id,
+    message: `${user.name} bought ${item.name}`,
+  });
+
+  revalidatePath("/groceries");
+  revalidatePath("/today");
+}
+
+export async function markAggregatedIngredientBought(data: AggregatedIngredient) {
+  const { user, household } = await requireHousehold();
+
+  const parsed = aggregatedIngredientSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const sourceId = getAggregatedIngredientSourceId(
+    parsed.data.normalizedName,
+    parsed.data.unit,
+  );
+
+  const existingItem = await db.groceryItem.findFirst({
+    where: {
+      householdId: household.id,
+      sourceType: "MEAL_PLAN",
+      sourceId,
+    },
+    select: { id: true },
+  });
+
+  const item = existingItem
+    ? await db.groceryItem.update({
+      where: { id: existingItem.id },
+      data: {
+        name: parsed.data.name,
+        quantity: parsed.data.quantity,
+        unit: parsed.data.unit,
+        category: parsed.data.category,
+        status: "BOUGHT",
+        checked: true,
+      },
+    })
+    : await db.groceryItem.create({
+      data: {
+        householdId: household.id,
+        name: parsed.data.name,
+        quantity: parsed.data.quantity,
+        unit: parsed.data.unit,
+        category: parsed.data.category,
+        sourceType: "MEAL_PLAN",
+        sourceId,
+        status: "BOUGHT",
+        checked: true,
+      },
+    });
 
   await logActivity({
     householdId: household.id,

@@ -35,6 +35,29 @@ import { cn } from "@/lib/utils";
 import type { HouseholdMember, MealSlot as MealSlotEnum, Recipe, User } from "@prisma/client";
 import type { MealPlanFormValues, MealPlanWithDetails } from "@/types";
 
+const USER_COLOR_STYLES = [
+  {
+    pill: "border-rose-200 bg-rose-50 text-rose-900",
+    avatar: "bg-rose-100 text-rose-700",
+  },
+  {
+    pill: "border-sky-200 bg-sky-50 text-sky-900",
+    avatar: "bg-sky-100 text-sky-700",
+  },
+  {
+    pill: "border-amber-200 bg-amber-50 text-amber-900",
+    avatar: "bg-amber-100 text-amber-700",
+  },
+  {
+    pill: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    avatar: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    pill: "border-violet-200 bg-violet-50 text-violet-900",
+    avatar: "bg-violet-100 text-violet-700",
+  },
+];
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -42,6 +65,16 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function getUserColorClasses(userId: string) {
+  let hash = 0;
+
+  for (let index = 0; index < userId.length; index += 1) {
+    hash = (hash * 31 + userId.charCodeAt(index)) >>> 0;
+  }
+
+  return USER_COLOR_STYLES[hash % USER_COLOR_STYLES.length];
 }
 
 export function MealSlotCell({
@@ -145,6 +178,9 @@ export function MealSlotCell({
 
   const mealName = meal.recipe?.name ?? meal.customMealName ?? "Meal";
   const isCooked = meal.status === "COOKED";
+  const assignedUserColors = meal.assignedTo
+    ? getUserColorClasses(meal.assignedTo.id)
+    : null;
 
   return (
     <>
@@ -165,9 +201,19 @@ export function MealSlotCell({
 
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-muted-foreground">{meal.servings} srv</span>
-          {meal.assignedTo && (
-            <div className="flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+          {meal.assignedTo && assignedUserColors && (
+            <div
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs",
+                assignedUserColors.pill,
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
+                  assignedUserColors.avatar,
+                )}
+              >
                 {getInitials(meal.assignedTo.name)}
               </div>
               <span>{meal.assignedTo.name.split(" ")[0]}</span>

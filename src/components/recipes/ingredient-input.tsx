@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { getIngredientSuggestions } from "@/actions/recipes";
+import { IngredientNameInput } from "@/components/shared/ingredient-name-input";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import type { RecipeFormValues } from "@/types";
 
@@ -39,11 +38,6 @@ export function IngredientInput({
   form: UseFormReturn<RecipeFormValues>;
   onRemove: () => void;
 }) {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const nameValue = useWatch({
     control: form.control,
     name: `ingredients.${index}.ingredientName`,
@@ -52,36 +46,6 @@ export function IngredientInput({
     control: form.control,
     name: `ingredients.${index}.unit`,
   });
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!nameValue || nameValue.length < 1) {
-      return;
-    }
-    debounceRef.current = setTimeout(async () => {
-      const results = await getIngredientSuggestions(nameValue);
-      setSuggestions(results);
-      setShowSuggestions(results.length > 0);
-    }, 300);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [nameValue]);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const shouldShowSuggestions =
-    showSuggestions && !!nameValue && nameValue.length > 0 && suggestions.length > 0;
 
   return (
     <div className="flex items-start gap-2">
@@ -117,37 +81,15 @@ export function IngredientInput({
       </Select>
 
       {/* Name with autocomplete */}
-      <div ref={containerRef} className="relative flex-1">
-        <Input
-          placeholder="Ingredient name"
-          autoComplete="off"
-          {...form.register(`ingredients.${index}.ingredientName`)}
-          onFocus={() => {
-            if (nameValue && suggestions.length > 0) {
-              setShowSuggestions(true);
-            }
-          }}
-        />
-        {shouldShowSuggestions && (
-          <ul className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
-            {suggestions.map((s) => (
-              <li key={s}>
-                <button
-                  type="button"
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    form.setValue(`ingredients.${index}.ingredientName`, s);
-                    setShowSuggestions(false);
-                  }}
-                >
-                  {s}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <IngredientNameInput
+        value={nameValue ?? ""}
+        onChange={(value) => form.setValue(`ingredients.${index}.ingredientName`, value, {
+          shouldDirty: true,
+          shouldValidate: true,
+        })}
+        placeholder="Ingredient name"
+        className="flex-1"
+      />
 
       {/* Remove */}
       <Button

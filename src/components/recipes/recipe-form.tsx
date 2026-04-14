@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { recipeSchema, type RecipeFormValues } from "@/types";
-import { createRecipe, updateRecipe } from "@/actions/recipes";
+import { createRecipe, getIngredientSuggestions, updateRecipe } from "@/actions/recipes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,7 @@ export function RecipeForm({
   const router = useRouter();
   const isEditing = !!recipeId;
   const [customTag, setCustomTag] = useState("");
+  const [ingredientLibrary, setIngredientLibrary] = useState<string[]>([]);
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
@@ -68,6 +69,23 @@ export function RecipeForm({
     control: form.control,
     name: "mealType",
   });
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadIngredientLibrary() {
+      const suggestions = await getIngredientSuggestions("");
+      if (mounted) {
+        setIngredientLibrary(suggestions);
+      }
+    }
+
+    void loadIngredientLibrary();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function toggleTag(tag: string) {
     const current = tags ?? [];
@@ -207,6 +225,34 @@ export function RecipeForm({
       {/* Ingredients */}
       <div className="space-y-2">
         <Label>Ingredients</Label>
+        {ingredientLibrary.length > 0 && (
+          <div className="space-y-2 rounded-2xl border bg-muted/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Existing ingredients
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ingredientLibrary.map((ingredient) => (
+                <Button
+                  key={ingredient}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() =>
+                    append({
+                      ingredientName: ingredient,
+                      quantity: 1,
+                      unit: null,
+                      isOptional: false,
+                      sortOrder: fields.length,
+                    })}
+                >
+                  {ingredient}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           {fields.map((field, index) => (
             <IngredientInput

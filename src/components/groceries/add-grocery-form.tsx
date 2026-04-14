@@ -4,10 +4,11 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { PackagePlus, Plus } from "lucide-react";
 import { addManualGroceryItem } from "@/actions/groceries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IngredientNameInput } from "@/components/shared/ingredient-name-input";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ export function AddGroceryForm() {
     resolver: zodResolver(schema),
     defaultValues: { name: "", quantity: 1, unit: null, category: "OTHER" },
   });
+  const nameValue = useWatch({ control: form.control, name: "name" });
   const selectedUnit = useWatch({ control: form.control, name: "unit" });
   const selectedCategory = useWatch({ control: form.control, name: "category" });
 
@@ -61,59 +63,69 @@ export function AddGroceryForm() {
   }
 
   return (
-    <form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex flex-col sm:flex-row gap-2"
-    >
-      <Input
-        placeholder="Item name..."
-        className="flex-1"
-        {...form.register("name")}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            form.handleSubmit(onSubmit)();
-          }
-        }}
-      />
-      <Input
-        type="number"
-        min={0.1}
-        step={0.1}
-        className="w-20"
-        inputMode="decimal"
-        {...form.register("quantity", { valueAsNumber: true })}
-      />
-      <Select
-        value={selectedUnit ?? "piece"}
-        onValueChange={(v) => form.setValue("unit", v === "piece" ? null : v)}
+    <div className="rounded-2xl border bg-card/80 p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+          <PackagePlus className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold">Add a manual item</p>
+          <p className="text-xs text-muted-foreground">
+            Keep track of staples and last-minute needs.
+          </p>
+        </div>
+      </div>
+
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid gap-3 md:grid-cols-[minmax(0,1.9fr)_110px_120px_160px_auto]"
       >
-        <SelectTrigger className="w-24">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {UNITS.map((u) => (
-            <SelectItem key={u} value={u}>{u}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={selectedCategory}
-        onValueChange={(v) => form.setValue("category", v as FormValues["category"])}
-      >
-        <SelectTrigger className="w-36">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {CATEGORIES.map((c) => (
-            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button type="submit" disabled={form.formState.isSubmitting} className="shrink-0">
-        <Plus className="h-4 w-4 mr-1" />
-        Add
-      </Button>
-    </form>
+        <IngredientNameInput
+          value={nameValue ?? ""}
+          onChange={(value) => form.setValue("name", value, { shouldValidate: true, shouldDirty: true })}
+          placeholder="Item name..."
+          className="min-w-0"
+          onEnter={() => form.handleSubmit(onSubmit)()}
+        />
+        <Input
+          type="number"
+          min={0.1}
+          step={0.1}
+          className="h-11"
+          inputMode="decimal"
+          {...form.register("quantity", { valueAsNumber: true })}
+        />
+        <Select
+          value={selectedUnit ?? "piece"}
+          onValueChange={(v) => form.setValue("unit", v === "piece" ? null : v)}
+        >
+          <SelectTrigger className="h-11">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {UNITS.map((u) => (
+              <SelectItem key={u} value={u}>{u}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={selectedCategory}
+          onValueChange={(v) => form.setValue("category", v as FormValues["category"])}
+        >
+          <SelectTrigger className="h-11">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="submit" disabled={form.formState.isSubmitting} className="h-11 px-5">
+          <Plus className="mr-1 h-4 w-4" />
+          Add
+        </Button>
+      </form>
+    </div>
   );
 }

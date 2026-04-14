@@ -139,8 +139,6 @@ export async function getIngredientSuggestions(
   query: string,
 ): Promise<string[]> {
   const { household } = await requireHousehold();
-  if (!query || query.length < 1) return [];
-
   const q = query.toLowerCase().trim();
 
   // Load seed list
@@ -152,19 +150,20 @@ export async function getIngredientSuggestions(
   const usedIngredients = await db.recipeIngredient.findMany({
     where: {
       recipe: { householdId: household.id },
-      ingredientName: { contains: q, mode: "insensitive" },
+      ...(q ? { ingredientName: { contains: q, mode: "insensitive" } } : {}),
     },
     select: { ingredientName: true },
     distinct: ["ingredientName"],
-    take: 5,
+    orderBy: { ingredientName: "asc" },
+    take: q ? 8 : 16,
   });
 
   const householdNames = usedIngredients.map((i) => i.ingredientName);
 
-  // Prefix match on seed list
-  const seedMatches = seedList
-    .filter((s) => s.toLowerCase().startsWith(q))
-    .slice(0, 8);
+  const seedMatches = (q
+    ? seedList.filter((s) => s.toLowerCase().startsWith(q))
+    : seedList
+  ).slice(0, q ? 10 : 20);
 
   // Merge: household history first, then seed matches, deduplicate
   const merged = [
@@ -172,7 +171,7 @@ export async function getIngredientSuggestions(
     ...seedMatches.filter(
       (s) => !householdNames.some((h) => h.toLowerCase() === s.toLowerCase()),
     ),
-  ].slice(0, 10);
+  ].slice(0, q ? 12 : 24);
 
   return merged;
 }

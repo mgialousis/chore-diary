@@ -24,8 +24,20 @@ export default async function GroceriesPage() {
   ]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Grocery List</h1>
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-2">
+        <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          Household Planner
+        </p>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Grocery List</h1>
+            <p className="text-sm text-muted-foreground">
+              Collect ingredients from planned meals and keep manual items in one place.
+            </p>
+          </div>
+        </div>
+      </div>
       <GroceryList
         manualItems={manualItems}
         boughtItems={boughtItems}

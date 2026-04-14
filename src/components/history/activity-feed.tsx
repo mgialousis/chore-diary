@@ -31,15 +31,31 @@ function getFilterHref(filter: string) {
   return filter === "all" ? "/history" : `/history?type=${filter}`;
 }
 
+function getOffsetHref(filter: string, offset: number) {
+  if (filter === "all") {
+    return offset === 0 ? "/history" : `/history?offset=${offset}`;
+  }
+
+  return offset === 0
+    ? `/history?type=${filter}`
+    : `/history?type=${filter}&offset=${offset}`;
+}
+
 export function ActivityFeed({
   activities,
   filter,
+  offset,
+  pageSize,
   nextOffset,
 }: {
   activities: ActivityLogWithUser[];
   filter: string;
+  offset: number;
+  pageSize: number;
   nextOffset: number | null;
 }) {
+  const previousOffset = Math.max(0, offset - pageSize);
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -81,12 +97,23 @@ export function ActivityFeed({
         </div>
       )}
 
-      {nextOffset !== null && (
-        <Button variant="outline" asChild>
-          <Link href={filter === "all" ? `/history?offset=${nextOffset}` : `/history?type=${filter}&offset=${nextOffset}`}>
-            Load more
-          </Link>
-        </Button>
+      {(offset > 0 || nextOffset !== null) && (
+        <div className="flex flex-wrap gap-2">
+          {offset > 0 && (
+            <Button variant="outline" asChild>
+              <Link href={getOffsetHref(filter, previousOffset)}>
+                Previous
+              </Link>
+            </Button>
+          )}
+          {nextOffset !== null && (
+            <Button variant="outline" asChild>
+              <Link href={getOffsetHref(filter, nextOffset)}>
+                Load more
+              </Link>
+            </Button>
+          )}
+        </div>
       )}
     </section>
   );

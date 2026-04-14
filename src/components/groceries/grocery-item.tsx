@@ -3,7 +3,13 @@
 import { useTransition } from "react";
 import { Trash2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { toggleGroceryItemChecked, markGroceryBought, deleteGroceryItem } from "@/actions/groceries";
+import { useRouter } from "next/navigation";
+import {
+  toggleGroceryItemChecked,
+  markGroceryBought,
+  deleteGroceryItem,
+  markAggregatedIngredientBought,
+} from "@/actions/groceries";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -26,26 +32,65 @@ const CATEGORY_LABELS: Record<string, string> = {
 // ─── Auto-generated (aggregated) item ────────────────────────
 
 export function AggregatedGroceryItem({ item }: { item: AggregatedIngredient }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const qty = Number.isInteger(item.quantity)
     ? item.quantity.toString()
     : item.quantity.toFixed(1);
 
+  function handleBought() {
+    startTransition(async () => {
+      const result = await markAggregatedIngredientBought(item) as { error?: string } | undefined;
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Item marked as bought");
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="flex items-start gap-3 py-2">
-      <div className="mt-0.5 h-4 w-4 rounded border border-muted-foreground/30 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-2xl border bg-background/80 px-4 py-3 shadow-sm transition-opacity",
+        isPending && "opacity-60",
+      )}
+    >
+      <Checkbox
+        checked={false}
+        onCheckedChange={handleBought}
+        className="mt-1 shrink-0"
+        disabled={isPending}
+        aria-label={`Mark ${item.name} as bought`}
+      />
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-semibold text-foreground">
           {qty} {item.unit ?? ""} {item.name}
         </p>
-        <Badge variant="outline" className="mt-0.5 text-xs py-0">
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 px-2 py-0 text-[11px] text-amber-900"
+        >
           {CATEGORY_LABELS[item.category] ?? item.category}
         </Badge>
         {item.sources.length > 0 && (
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-xs text-muted-foreground">
             From: {item.sources.join(", ")}
           </p>
         )}
       </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-9 rounded-full border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+        onClick={handleBought}
+        disabled={isPending}
+      >
+        <ShoppingCart className="mr-1 h-3.5 w-3.5" />
+        Bought
+      </Button>
     </div>
   );
 }
@@ -82,40 +127,43 @@ export function ManualGroceryItem({ item }: { item: GroceryItem }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 py-2 transition-opacity",
+        "flex flex-col gap-3 rounded-2xl border bg-background/80 px-4 py-3 shadow-sm transition-opacity sm:flex-row sm:items-start",
         isPending && "opacity-60",
       )}
     >
       <Checkbox
         checked={item.checked}
         onCheckedChange={handleToggle}
-        className="mt-0.5 shrink-0"
+        className="mt-1 shrink-0"
       />
-      <div className="flex-1 min-w-0">
-        <p className={cn("text-sm font-medium", item.checked && "line-through text-muted-foreground")}>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className={cn("text-sm font-semibold", item.checked && "line-through text-muted-foreground")}>
           {qty} {item.unit ?? ""} {item.name}
         </p>
-        <Badge variant="outline" className="text-xs py-0 mt-0.5">
+        <Badge
+          variant="outline"
+          className="border-slate-200 bg-slate-50 px-2 py-0 text-[11px] text-slate-700"
+        >
           {CATEGORY_LABELS[item.category] ?? item.category}
         </Badge>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
         {!item.checked && (
           <Button
             size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-green-700 hover:bg-green-50"
+            variant="outline"
+            className="h-9 rounded-full border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
             onClick={handleBought}
             disabled={isPending}
           >
-            <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+            <ShoppingCart className="mr-1 h-3.5 w-3.5" />
             Bought
           </Button>
         )}
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 px-2 text-destructive hover:bg-destructive/10"
+          className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
           onClick={handleDelete}
           disabled={isPending}
         >
