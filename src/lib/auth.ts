@@ -15,16 +15,45 @@ export async function getCurrentUser() {
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
 
-  const user = await db.user.upsert({
+  const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+  const displayName = getDefaultDisplayName(clerkUser);
+
+  const existingByClerkId = await db.user.findUnique({
     where: { clerkId: clerkUser.id },
-    update: {
-      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
-      avatarUrl: clerkUser.imageUrl,
-    },
-    create: {
+  });
+
+  if (existingByClerkId) {
+    return db.user.update({
+      where: { id: existingByClerkId.id },
+      data: {
+        email,
+        avatarUrl: clerkUser.imageUrl,
+      },
+    });
+  }
+
+  if (email) {
+    const existingByEmail = await db.user.findUnique({
+      where: { email },
+    });
+
+    if (existingByEmail) {
+      return db.user.update({
+        where: { id: existingByEmail.id },
+        data: {
+          clerkId: clerkUser.id,
+          avatarUrl: clerkUser.imageUrl,
+          email,
+        },
+      });
+    }
+  }
+
+  const user = await db.user.create({
+    data: {
       clerkId: clerkUser.id,
-      name: getDefaultDisplayName(clerkUser),
-      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+      name: displayName,
+      email,
       avatarUrl: clerkUser.imageUrl,
     },
   });
