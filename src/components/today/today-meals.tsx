@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { UtensilsCrossed, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -13,14 +13,18 @@ import type { MealPlanWithDetails } from "@/types";
 
 function MealCard({ meal }: { meal: MealPlanWithDetails }) {
   const [isPending, startTransition] = useTransition();
-  const isCooked = meal.status === "COOKED";
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(meal.status);
+  const isCooked = optimisticStatus === "COOKED";
   const mealName = meal.recipe?.name ?? meal.customMealName ?? "Meal";
 
   function handleCooked() {
     startTransition(async () => {
+      setOptimisticStatus("COOKED");
       const result = await markMealCooked(meal.id) as { error?: string } | undefined;
-      if (result?.error) toast.error(result.error);
-      else toast.success("Meal marked as cooked");
+      if (result?.error) {
+        setOptimisticStatus(meal.status);
+        toast.error(result.error);
+      } else toast.success("Meal marked as cooked");
     });
   }
 

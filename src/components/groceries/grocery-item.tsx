@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { Trash2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -34,14 +34,17 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function AggregatedGroceryItem({ item }: { item: AggregatedIngredient }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [optimisticBought, setOptimisticBought] = useOptimistic(false);
   const qty = Number.isInteger(item.quantity)
     ? item.quantity.toString()
     : item.quantity.toFixed(1);
 
   function handleBought() {
     startTransition(async () => {
+      setOptimisticBought(true);
       const result = await markAggregatedIngredientBought(item) as { error?: string } | undefined;
       if (result?.error) {
+        setOptimisticBought(false);
         toast.error(result.error);
         return;
       }
@@ -50,6 +53,8 @@ export function AggregatedGroceryItem({ item }: { item: AggregatedIngredient }) 
       router.refresh();
     });
   }
+
+  if (optimisticBought) return null;
 
   return (
     <div
@@ -99,26 +104,54 @@ export function AggregatedGroceryItem({ item }: { item: AggregatedIngredient }) 
 
 export function ManualGroceryItem({ item }: { item: GroceryItem }) {
   const [isPending, startTransition] = useTransition();
+  const [optimisticChecked, setOptimisticChecked] = useOptimistic(item.checked);
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(item.status);
+  const [optimisticDeleted, setOptimisticDeleted] = useOptimistic(false);
 
   function handleToggle() {
     startTransition(async () => {
-      await toggleGroceryItemChecked(item.id);
+      const nextChecked = !optimisticChecked;
+      const nextStatus = optimisticStatus === "BOUGHT" && !nextChecked ? "NEEDED" : optimisticStatus;
+      setOptimisticChecked(nextChecked);
+      setOptimisticStatus(nextStatus);
+      const result = await toggleGroceryItemChecked(item.id) as { error?: string } | undefined;
+      if (result?.error) {
+        setOptimisticChecked(item.checked);
+        setOptimisticStatus(item.status);
+        toast.error(result.error);
+      }
     });
   }
 
   function handleBought() {
     startTransition(async () => {
-      await markGroceryBought(item.id);
-      toast.success("Item marked as bought");
+      setOptimisticChecked(true);
+      setOptimisticStatus("BOUGHT");
+      const result = await markGroceryBought(item.id) as { error?: string } | undefined;
+      if (result?.error) {
+        setOptimisticChecked(item.checked);
+        setOptimisticStatus(item.status);
+        toast.error(result.error);
+      } else {
+        toast.success("Item marked as bought");
+      }
     });
   }
 
   function handleDelete() {
     startTransition(async () => {
-      await deleteGroceryItem(item.id);
-      toast.success("Item removed from grocery list");
+      setOptimisticDeleted(true);
+      const result = await deleteGroceryItem(item.id) as { error?: string } | undefined;
+      if (result?.error) {
+        setOptimisticDeleted(false);
+        toast.error(result.error);
+      } else {
+        toast.success("Item removed from grocery list");
+      }
     });
   }
+
+  if (optimisticDeleted) return null;
 
   const qty = Number.isInteger(item.quantity)
     ? item.quantity.toString()
@@ -132,12 +165,12 @@ export function ManualGroceryItem({ item }: { item: GroceryItem }) {
       )}
     >
       <Checkbox
-        checked={item.checked}
+        checked={optimisticChecked}
         onCheckedChange={handleToggle}
         className="mt-1 shrink-0"
       />
       <div className="min-w-0 flex-1 space-y-1">
-        <p className={cn("text-sm font-semibold", item.checked && "line-through text-muted-foreground")}>
+        <p className={cn("text-sm font-semibold", optimisticChecked && "line-through text-muted-foreground")}>
           {qty} {item.unit ?? ""} {item.name}
         </p>
         <Badge
@@ -148,7 +181,7 @@ export function ManualGroceryItem({ item }: { item: GroceryItem }) {
         </Badge>
       </div>
       <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-        {!item.checked && (
+        {optimisticStatus !== "BOUGHT" && !optimisticChecked && (
           <Button
             size="sm"
             variant="outline"

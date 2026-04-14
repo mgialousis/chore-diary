@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { addDays, format, parseISO } from "date-fns";
 import { Check, Copy, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -95,13 +95,17 @@ export function MealSlotCell({
   const [duplicateDate, setDuplicateDate] = useState(format(addDays(date, 1), "yyyy-MM-dd"));
   const [duplicateSlot, setDuplicateSlot] = useState<MealSlotEnum>(slot);
   const [isPending, startTransition] = useTransition();
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(meal?.status ?? null);
+  const [optimisticRemoved, setOptimisticRemoved] = useOptimistic(false);
 
   function handleCooked() {
     if (!meal) return;
 
     startTransition(async () => {
+      setOptimisticStatus("COOKED");
       const result = await markMealCooked(meal.id) as { error?: string } | undefined;
       if (result?.error) {
+        setOptimisticStatus(meal.status);
         toast.error(result.error);
       } else {
         toast.success("Meal marked as cooked");
@@ -113,8 +117,10 @@ export function MealSlotCell({
     if (!meal) return;
 
     startTransition(async () => {
+      setOptimisticRemoved(true);
       const result = await removeMeal(meal.id) as { error?: string } | undefined;
       if (result?.error) {
+        setOptimisticRemoved(false);
         toast.error(result.error);
       } else {
         toast.success("Meal removed");
@@ -154,7 +160,7 @@ export function MealSlotCell({
       }
     : undefined;
 
-  if (!meal) {
+  if (!meal || optimisticRemoved) {
     return (
       <>
         <button
@@ -177,7 +183,7 @@ export function MealSlotCell({
   }
 
   const mealName = meal.recipe?.name ?? meal.customMealName ?? "Meal";
-  const isCooked = meal.status === "COOKED";
+  const isCooked = optimisticStatus === "COOKED";
   const assignedUserColors = meal.assignedTo
     ? getUserColorClasses(meal.assignedTo.id)
     : null;
