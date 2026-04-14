@@ -25,7 +25,7 @@ function GroceryRow({ item }: { item: GroceryItemSummary }) {
         toast.error(result.error);
         setChecked(false);
       } else {
-        toast.success(`Marked ${item.name} as bought`);
+        toast.success("Item marked as bought");
       }
     });
   }

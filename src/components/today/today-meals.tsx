@@ -20,7 +20,7 @@ function MealCard({ meal }: { meal: MealPlanWithDetails }) {
     startTransition(async () => {
       const result = await markMealCooked(meal.id) as { error?: string } | undefined;
       if (result?.error) toast.error(result.error);
-      else toast.success("Marked as cooked!");
+      else toast.success("Meal marked as cooked");
     });
   }
 

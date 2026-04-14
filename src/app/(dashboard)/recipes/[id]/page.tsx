@@ -37,7 +37,7 @@ export default async function RecipeDetailPage({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold leading-tight">{recipe.name}</h1>
-          <RecipeActions recipeId={recipe.id} householdId={household.id} recipe={{
+          <RecipeActions recipeId={recipe.id} recipe={{
             name: recipe.name,
             description: recipe.description ?? undefined,
             defaultServings: recipe.defaultServings,

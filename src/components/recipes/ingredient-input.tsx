@@ -33,12 +33,10 @@ const UNITS = [
 export function IngredientInput({
   index,
   form,
-  householdId,
   onRemove,
 }: {
   index: number;
   form: UseFormReturn<RecipeFormValues>;
-  householdId: string;
   onRemove: () => void;
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -61,7 +59,7 @@ export function IngredientInput({
       return;
     }
     debounceRef.current = setTimeout(async () => {
-      const results = await getIngredientSuggestions(nameValue, householdId);
+      const results = await getIngredientSuggestions(nameValue);
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
     }, 300);
@@ -69,7 +67,7 @@ export function IngredientInput({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [nameValue, householdId]);
+  }, [nameValue]);
 
   // Close suggestions on outside click
   useEffect(() => {

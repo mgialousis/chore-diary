@@ -97,15 +97,15 @@ export function ChoreForm({
     try {
       if (isEditing) {
         await updateChoreTemplate(templateId, data);
-        toast.success("Chore updated");
+        toast.success("Chore saved");
       } else {
         await createChoreTemplate(data);
-        toast.success("Chore created");
+        toast.success("Chore saved");
       }
       router.refresh();
       onSuccess?.();
     } catch {
-      toast.error("Something went wrong");
+      toast.error("Something went wrong. Please try again.");
     }
   }
 

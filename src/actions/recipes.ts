@@ -137,8 +137,8 @@ export async function deleteRecipe(recipeId: string) {
 
 export async function getIngredientSuggestions(
   query: string,
-  householdId: string,
 ): Promise<string[]> {
+  const { household } = await requireHousehold();
   if (!query || query.length < 1) return [];
 
   const q = query.toLowerCase().trim();
@@ -151,7 +151,7 @@ export async function getIngredientSuggestions(
   // Get household history
   const usedIngredients = await db.recipeIngredient.findMany({
     where: {
-      recipe: { householdId },
+      recipe: { householdId: household.id },
       ingredientName: { contains: q, mode: "insensitive" },
     },
     select: { ingredientName: true },

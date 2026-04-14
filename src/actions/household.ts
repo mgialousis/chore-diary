@@ -15,6 +15,14 @@ const joinHouseholdSchema = z.object({
 
 export async function createHousehold(formData: FormData) {
   const user = await requireAuth();
+  const existingMembership = await db.householdMember.findFirst({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+
+  if (existingMembership) {
+    return { error: "You are already a member of a household." };
+  }
 
   const parsed = createHouseholdSchema.safeParse({
     name: formData.get("name"),
@@ -48,6 +56,14 @@ export async function createHousehold(formData: FormData) {
 
 export async function joinHousehold(formData: FormData) {
   const user = await requireAuth();
+  const existingMembership = await db.householdMember.findFirst({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+
+  if (existingMembership) {
+    return { error: "You are already a member of a household." };
+  }
 
   const parsed = joinHouseholdSchema.safeParse({
     inviteCode: formData.get("inviteCode"),

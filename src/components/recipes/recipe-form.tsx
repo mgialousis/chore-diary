@@ -28,12 +28,10 @@ const PRESET_TAGS = [
 ];
 
 export function RecipeForm({
-  householdId,
   defaultValues,
   recipeId,
   onSuccess,
 }: {
-  householdId: string;
   defaultValues?: Partial<RecipeFormValues>;
   recipeId?: string;
   onSuccess?: (id?: string) => void;
@@ -94,7 +92,7 @@ export function RecipeForm({
     try {
       if (isEditing) {
         await updateRecipe(recipeId, data);
-        toast.success("Recipe updated");
+        toast.success("Recipe saved");
         router.refresh();
         onSuccess?.();
       } else {
@@ -103,12 +101,12 @@ export function RecipeForm({
           toast.error(result.error);
           return;
         }
-        toast.success("Recipe created");
+        toast.success("Recipe saved");
         router.push(`/recipes/${result?.id}`);
         onSuccess?.(result?.id);
       }
     } catch {
-      toast.error("Something went wrong");
+      toast.error("Something went wrong. Please try again.");
     }
   }
 
@@ -215,7 +213,6 @@ export function RecipeForm({
               key={field.id}
               index={index}
               form={form}
-              householdId={householdId}
               onRemove={() => remove(index)}
             />
           ))}

@@ -40,7 +40,7 @@ function ChoreRow({
       if (result && "error" in result && result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Done!");
+        toast.success("Chore completed");
       }
     });
   }
@@ -48,7 +48,7 @@ function ChoreRow({
   function handleSkip() {
     startTransition(async () => {
       await skipChore(chore.id);
-      toast.success("Skipped");
+      toast.success("Chore skipped");
     });
   }
 

@@ -74,16 +74,16 @@ function inferGroceryCategory(normalizedName: string): GroceryCategory {
 // ─── Generate grocery list (dynamic, not stored) ─────────────
 
 export async function generateGroceryList(
-  householdId: string,
   startDate: Date,
   endDate: Date,
 ): Promise<AggregatedIngredient[]> {
+  const { household } = await requireHousehold();
   const normalizedStartDate = toDateOnly(startDate);
   const normalizedEndDate = toDateOnly(endDate);
 
   const meals = await db.mealPlan.findMany({
     where: {
-      householdId,
+      householdId: household.id,
       date: { gte: normalizedStartDate, lte: normalizedEndDate },
       status: "PLANNED",
       recipeId: { not: null },

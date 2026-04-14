@@ -12,7 +12,7 @@ export default async function GroceriesPage() {
   const in7Days = toDateOnly(addDays(today, 7));
 
   const [aggregated, manualItems, boughtItems] = await Promise.all([
-    generateGroceryList(household.id, today, in7Days),
+    generateGroceryList(today, in7Days),
     db.groceryItem.findMany({
       where: { householdId: household.id, status: "NEEDED" },
       orderBy: { createdAt: "desc" },
@@ -27,7 +27,6 @@ export default async function GroceriesPage() {
     <div className="p-4 md:p-6 space-y-4">
       <h1 className="text-2xl font-bold">Grocery List</h1>
       <GroceryList
-        householdId={household.id}
         manualItems={manualItems}
         boughtItems={boughtItems}
         initialAggregated={aggregated}

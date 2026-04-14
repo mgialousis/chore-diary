@@ -64,14 +64,14 @@ export function ManualGroceryItem({ item }: { item: GroceryItem }) {
   function handleBought() {
     startTransition(async () => {
       await markGroceryBought(item.id);
-      toast.success(`Marked ${item.name} as bought`);
+      toast.success("Item marked as bought");
     });
   }
 
   function handleDelete() {
     startTransition(async () => {
       await deleteGroceryItem(item.id);
-      toast.success("Item removed");
+      toast.success("Item removed from grocery list");
     });
   }
 

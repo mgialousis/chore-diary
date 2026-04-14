@@ -82,7 +82,7 @@ export function MealFormModal({
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success("Meal planned");
+      toast.success("Meal saved");
       onOpenChange(false);
       form.reset();
     }

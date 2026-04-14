@@ -98,7 +98,7 @@ export default async function RecipesPage({
 
       {recipes.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p>No recipes yet</p>
+          <p>No recipes saved. Create your first recipe.</p>
           <Button variant="outline" className="mt-4" asChild>
             <Link href="/recipes/new">Add your first recipe</Link>
           </Button>

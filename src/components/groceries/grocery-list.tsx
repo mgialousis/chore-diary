@@ -66,12 +66,10 @@ function Section({
 }
 
 export function GroceryList({
-  householdId,
   manualItems,
   boughtItems,
   initialAggregated,
 }: {
-  householdId: string;
   manualItems: GroceryItem[];
   boughtItems: GroceryItem[];
   initialAggregated: AggregatedIngredient[];
@@ -86,7 +84,7 @@ export function GroceryList({
     startRefresh(async () => {
       const start = toDateOnly(new Date());
       const end = toDateOnly(addDays(start, days));
-      const result = await generateGroceryList(householdId, start, end);
+      const result = await generateGroceryList(start, end);
       setAggregated(result);
     });
   }
@@ -94,7 +92,7 @@ export function GroceryList({
   function handleClearBought() {
     startClear(async () => {
       await clearBoughtItems();
-      toast.success("Cleared bought items");
+      toast.success("Bought items cleared");
     });
   }
 
@@ -166,7 +164,9 @@ export function GroceryList({
       <Section title="Manual Items" count={needingItems.length}>
         <AddGroceryForm />
         {needingItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2">No manual items added.</p>
+          <p className="text-sm text-muted-foreground py-2">
+            Your grocery list is empty. Plan some meals or add items manually.
+          </p>
         ) : (
           <div className="rounded-xl border divide-y px-4">
             {needingItems.map((item) => (

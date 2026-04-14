@@ -55,7 +55,7 @@ export function AddGroceryForm() {
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success("Item added");
+      toast.success("Item added to grocery list");
       form.reset({ name: "", quantity: 1, unit: null, category: "OTHER" });
     }
   }

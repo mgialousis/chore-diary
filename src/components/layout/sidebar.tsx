@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -49,10 +50,13 @@ export function Sidebar({
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r bg-muted/40">
       <div className="flex h-14 items-center gap-3 border-b px-4">
         {avatarUrl ? (
-          <img
+          <Image
             src={avatarUrl}
             alt={userName}
+            width={32}
+            height={32}
             className="h-8 w-8 rounded-full"
+            unoptimized
           />
         ) : (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">

@@ -71,7 +71,7 @@ export function MealSlotCell({
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Marked as cooked!");
+        toast.success("Meal marked as cooked");
       }
     });
   }

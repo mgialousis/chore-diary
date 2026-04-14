@@ -47,6 +47,11 @@ export default async function MealsPage({
   return (
     <div className="p-4 md:p-6 space-y-4">
       <h1 className="text-2xl font-bold">Meal Planner</h1>
+      {meals.length === 0 && (
+        <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+          <p>No meals planned this week. Start planning!</p>
+        </div>
+      )}
       <MealCalendar
         days={days}
         meals={meals}

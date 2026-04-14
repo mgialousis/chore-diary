@@ -19,11 +19,9 @@ import type { RecipeFormValues } from "@/types";
 
 export function RecipeActions({
   recipeId,
-  householdId,
   recipe,
 }: {
   recipeId: string;
-  householdId: string;
   recipe: RecipeFormValues;
 }) {
   const router = useRouter();
@@ -64,7 +62,6 @@ export function RecipeActions({
             <DialogTitle>Edit Recipe</DialogTitle>
           </DialogHeader>
           <RecipeForm
-            householdId={householdId}
             recipeId={recipeId}
             defaultValues={recipe}
             onSuccess={() => setEditOpen(false)}

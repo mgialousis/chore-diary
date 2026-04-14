@@ -121,7 +121,7 @@ export function ChoreList({
         {/* Empty state */}
         {filterChores([...dueToday, ...overdue, ...upcoming, ...recentlyCompleted]).length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            <p>No chores yet</p>
+            <p>No chores yet. Add your first chore to get started.</p>
             <Button
               variant="outline"
               className="mt-4"
