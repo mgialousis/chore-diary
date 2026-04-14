@@ -2,6 +2,17 @@
 
 Shared household planner for chores, meals, recipes, groceries, and activity history.
 
+## Current App Scope
+
+- household onboarding with invite-code join flow
+- Today dashboard with meals, chores, groceries, and activity-driven revalidation
+- recurring chores with complete/skip flows
+- weekly meal planner with duplicate/edit/cooked states
+- recipe library with ingredient autocomplete and custom tags
+- groceries generated from meal plans plus manual items
+- history feed with weekly household stats
+- editable local display name from the dashboard sidebar
+
 ## Stack
 
 - `Next.js 16`
@@ -37,6 +48,12 @@ Run the app:
 npm run dev
 ```
 
+Optional seed run:
+
+```bash
+npx prisma db seed
+```
+
 Open:
 
 - app: `http://localhost:3000`
@@ -46,6 +63,14 @@ Open:
 
 - Use `http://localhost:3000` during browser automation. Clerk rendered correctly on `localhost` during validation, while `127.0.0.1` produced a blank auth surface in Playwright.
 - Prisma migrations and MCP database access should use a reachable Supabase connection string. If direct IPv6 access fails, use the Supabase pooler for tooling that supports it.
+- `prisma/seed.ts` validates the bundled ingredient seed list on every run and can also create demo household recipes if `SEED_DEMO_CLERK_ID` and `SEED_DEMO_EMAIL` are set.
+- Display names are stored locally in the app database. You can change the name shown in the app from the desktop sidebar edit button without changing your Clerk account profile.
+
+## UX Notes
+
+- `/today` and `/history` now include route loading skeletons.
+- Dashboard routes share an error boundary via `src/app/(dashboard)/error.tsx`.
+- Browser-facing auth automation should prefer `localhost` over `127.0.0.1`.
 
 ## Project Docs
 

@@ -12,9 +12,21 @@ import {
   Clock,
   Copy,
   Check,
+  Pencil,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { updateDisplayName } from "@/actions/user";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -39,11 +51,27 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [copied, setCopied] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [name, setName] = useState(userName);
+  const [isPending, startTransition] = useTransition();
 
   function handleCopy() {
     navigator.clipboard.writeText(inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleSaveName() {
+    startTransition(async () => {
+      const result = await updateDisplayName({ name });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Display name updated");
+      setEditOpen(false);
+    });
   }
 
   return (
@@ -65,7 +93,21 @@ export function Sidebar({
         )}
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{householdName}</p>
-          <p className="truncate text-xs text-muted-foreground">{userName}</p>
+          <div className="flex items-center gap-1">
+            <p className="truncate text-xs text-muted-foreground">{userName}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 shrink-0"
+              onClick={() => {
+                setName(userName);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="h-3 w-3" />
+              <span className="sr-only">Edit display name</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -110,6 +152,32 @@ export function Sidebar({
           </Button>
         </div>
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit display name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="display-name">Name</Label>
+            <Input
+              id="display-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={50}
+              placeholder="Your name"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveName} disabled={isPending}>
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }

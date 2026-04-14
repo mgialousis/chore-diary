@@ -1,6 +1,16 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 
+function getDefaultDisplayName(clerkUser: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
+  return (
+    clerkUser.firstName ??
+    clerkUser.fullName ??
+    clerkUser.username ??
+    clerkUser.emailAddresses[0]?.emailAddress?.split("@")[0] ??
+    "User"
+  );
+}
+
 export async function getCurrentUser() {
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
@@ -8,12 +18,12 @@ export async function getCurrentUser() {
   const user = await db.user.upsert({
     where: { clerkId: clerkUser.id },
     update: {
-      name: clerkUser.firstName ?? "User",
       email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+      avatarUrl: clerkUser.imageUrl,
     },
     create: {
       clerkId: clerkUser.id,
-      name: clerkUser.firstName ?? "User",
+      name: getDefaultDisplayName(clerkUser),
       email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
       avatarUrl: clerkUser.imageUrl,
     },
