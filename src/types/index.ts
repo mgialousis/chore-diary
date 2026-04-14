@@ -2,6 +2,8 @@ import { z } from "zod";
 import type {
   ChoreInstance,
   ChoreTemplate,
+  Recipe,
+  RecipeIngredient,
   User,
 } from "@prisma/client";
 
@@ -41,9 +43,38 @@ export const choreTemplateSchema = z.object({
 
 export type ChoreTemplateFormValues = z.infer<typeof choreTemplateSchema>;
 
+// ─── Recipe Schemas ─────────────────────────────────────────
+
+export const ingredientSchema = z.object({
+  ingredientName: z.string().min(1, "Name is required"),
+  quantity: z.number().positive("Must be positive"),
+  unit: z.string().nullable(),
+  isOptional: z.boolean(),
+  sortOrder: z.number(),
+});
+
+export const recipeSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  description: z.string().max(1000).optional(),
+  defaultServings: z.number().min(1).max(20),
+  mealType: z.enum(["LUNCH", "DINNER"]).nullable(),
+  prepTimeMinutes: z.number().min(0).max(600).nullable(),
+  instructions: z.string().max(5000).optional(),
+  tags: z.array(z.string()),
+  ingredients: z.array(ingredientSchema).min(1, "At least one ingredient is required"),
+});
+
+export type IngredientFormValues = z.infer<typeof ingredientSchema>;
+export type RecipeFormValues = z.infer<typeof recipeSchema>;
+
 // ─── Composite Types ────────────────────────────────────────
 
 export type ChoreInstanceWithTemplate = ChoreInstance & {
   choreTemplate: ChoreTemplate | null;
   completedBy: User | null;
+};
+
+export type RecipeWithIngredients = Recipe & {
+  ingredients: RecipeIngredient[];
+  createdBy: User;
 };
