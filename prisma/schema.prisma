@@ -1,13 +1,294 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Chore Diary / Shared Home Planner — MVP Prisma Schema
+// Database: PostgreSQL (Supabase or Neon)
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── ENUMS ────────────────────────────────────────────────
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  EVERY_N_DAYS
+  WEEKLY
+  SPECIFIC_DAYS
+}
+
+enum ChoreCategory {
+  COOKING
+  CLEANING
+  LAUNDRY
+  GROCERIES
+  DISHES
+  TRASH
+  BATHROOM
+  TIDYING
+  HOUSEHOLD_ADMIN
+  OTHER
+}
+
+enum ChoreStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+enum MealSlot {
+  LUNCH
+  DINNER
+}
+
+enum MealStatus {
+  PLANNED
+  COOKED
+  SKIPPED
+}
+
+enum GrocerySourceType {
+  MEAL_PLAN
+  MANUAL
+}
+
+enum GroceryStatus {
+  NEEDED
+  BOUGHT
+  ARCHIVED
+}
+
+enum GroceryCategory {
+  VEGETABLES
+  FRUIT
+  DAIRY
+  MEAT_FISH
+  PANTRY
+  FROZEN
+  CLEANING_SUPPLIES
+  BATHROOM_SUPPLIES
+  OTHER
+}
+
+enum EventType {
+  CHORE_COMPLETED
+  CHORE_SKIPPED
+  MEAL_COOKED
+  MEAL_PLANNED
+  GROCERY_BOUGHT
+  GROCERY_ADDED
+  RECIPE_CREATED
+}
+
+enum HouseholdRole {
+  OWNER
+  MEMBER
+}
+
+// ─── MODELS ───────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique @map("clerk_id")
+  name      String
+  email     String   @unique
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  householdMemberships HouseholdMember[]
+  assignedChores       ChoreTemplate[]   @relation("AssignedChores")
+  completedChores      ChoreInstance[]   @relation("CompletedChores")
+  assignedMeals        MealPlan[]        @relation("AssignedMeals")
+  cookedMeals          MealPlan[]        @relation("CookedMeals")
+  createdRecipes       Recipe[]
+  activityLogs         ActivityLog[]
+
+  @@map("users")
+}
+
+model Household {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique @map("invite_code")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members        HouseholdMember[]
+  choreTemplates ChoreTemplate[]
+  choreInstances ChoreInstance[]
+  recipes        Recipe[]
+  mealPlans      MealPlan[]
+  groceryItems   GroceryItem[]
+  activityLogs   ActivityLog[]
+
+  @@map("households")
+}
+
+model HouseholdMember {
+  id          String        @id @default(cuid())
+  householdId String        @map("household_id")
+  userId      String        @map("user_id")
+  role        HouseholdRole @default(MEMBER)
+  joinedAt    DateTime      @default(now()) @map("joined_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+  @@map("household_members")
+}
+
+model ChoreTemplate {
+  id                 String         @id @default(cuid())
+  householdId        String         @map("household_id")
+  name               String
+  category           ChoreCategory  @default(OTHER)
+  assignedUserId     String?        @map("assigned_user_id")
+  recurrenceType     RecurrenceType @default(NONE) @map("recurrence_type")
+  recurrenceInterval Int?           @map("recurrence_interval") // e.g., every N days
+  daysOfWeek         Int[]          @map("days_of_week") // 0=Sun..6=Sat, used with SPECIFIC_DAYS
+  nextDueDate        DateTime?      @map("next_due_date") // simplifies instance generation
+  isActive           Boolean        @default(true) @map("is_active")
+  notes              String?
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  household    Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assignedUser User?           @relation("AssignedChores", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  instances    ChoreInstance[]
+
+  @@index([householdId])
+  @@index([householdId, isActive])
+  @@map("chore_templates")
+}
+
+model ChoreInstance {
+  id                String        @id @default(cuid())
+  householdId       String        @map("household_id")
+  choreTemplateId   String?       @map("chore_template_id")
+  name              String
+  category          ChoreCategory @default(OTHER)
+  assignedUserId    String?       @map("assigned_user_id")
+  dueDate           DateTime      @map("due_date") @db.Date
+  status            ChoreStatus   @default(PENDING)
+  completedAt       DateTime?     @map("completed_at")
+  completedByUserId String?       @map("completed_by_user_id")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  choreTemplate ChoreTemplate? @relation(fields: [choreTemplateId], references: [id], onDelete: SetNull)
+  completedBy   User?          @relation("CompletedChores", fields: [completedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, dueDate])
+  @@index([householdId, status])
+  @@map("chore_instances")
+}
+
+model Recipe {
+  id              String    @id @default(cuid())
+  householdId     String    @map("household_id")
+  name            String
+  description     String?
+  defaultServings Int       @default(2) @map("default_servings")
+  mealType        MealSlot? @map("meal_type") // null = both lunch and dinner
+  prepTimeMinutes Int?      @map("prep_time_minutes")
+  instructions    String?
+  tags            String[] // ["quick", "vegetarian", "cheap"] — PostgreSQL text array
+  createdByUserId String    @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  household   Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   User               @relation(fields: [createdByUserId], references: [id])
+  ingredients RecipeIngredient[]
+  mealPlans   MealPlan[]
+
+  @@index([householdId])
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id             String  @id @default(cuid())
+  recipeId       String  @map("recipe_id")
+  ingredientName String  @map("ingredient_name") // display name: "Cherry Tomatoes"
+  normalizedName String  @map("normalized_name") // for merging: "cherry tomato"
+  quantity       Float
+  unit           String? // "g", "ml", "cups", "pieces", null for "to taste"
+  isOptional     Boolean @default(false) @map("is_optional")
+  sortOrder      Int     @default(0) @map("sort_order")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@map("recipe_ingredients")
+}
+
+model MealPlan {
+  id             String     @id @default(cuid())
+  householdId    String     @map("household_id")
+  date           DateTime   @db.Date
+  mealSlot       MealSlot   @map("meal_slot")
+  recipeId       String?    @map("recipe_id")
+  customMealName String?    @map("custom_meal_name") // when no recipe is linked
+  assignedUserId String?    @map("assigned_user_id") // who's cooking
+  servings       Int        @default(2)
+  notes          String?
+  status         MealStatus @default(PLANNED)
+  cookedAt       DateTime?  @map("cooked_at")
+  cookedByUserId String?    @map("cooked_by_user_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  recipe     Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  assignedTo User?     @relation("AssignedMeals", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  cookedBy   User?     @relation("CookedMeals", fields: [cookedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, date, mealSlot])
+  @@index([householdId, date])
+  @@map("meal_plans")
+}
+
+model GroceryItem {
+  id           String            @id @default(cuid())
+  householdId  String            @map("household_id")
+  name         String
+  quantity     Float             @default(1)
+  unit         String?
+  category     GroceryCategory   @default(OTHER)
+  sourceType   GrocerySourceType @map("source_type")
+  sourceId     String?           @map("source_id") // meal_plan id if from recipe
+  neededByDate DateTime?         @map("needed_by_date") @db.Date
+  status       GroceryStatus     @default(NEEDED)
+  checked      Boolean           @default(false)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, status])
+  @@map("grocery_items")
+}
+
+model ActivityLog {
+  id          String    @id @default(cuid())
+  householdId String    @map("household_id")
+  userId      String    @map("user_id")
+  eventType   EventType @map("event_type")
+  entityType  String    @map("entity_type") // "chore", "meal", "grocery", "recipe"
+  entityId    String?   @map("entity_id")
+  message     String // human-readable: "Maria completed Laundry"
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([householdId, createdAt])
+  @@index([householdId, eventType])
+  @@map("activity_log")
 }
