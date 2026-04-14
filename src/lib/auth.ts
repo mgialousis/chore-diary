@@ -11,6 +11,25 @@ function getDefaultDisplayName(clerkUser: NonNullable<Awaited<ReturnType<typeof 
   );
 }
 
+function getErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return { error };
+  }
+
+  const details: Record<string, unknown> = {
+    name: error.name,
+    message: error.message,
+  };
+
+  if ("code" in error) details.code = (error as { code?: string }).code;
+  if ("meta" in error) details.meta = (error as { meta?: unknown }).meta;
+  if ("clientVersion" in error) {
+    details.clientVersion = (error as { clientVersion?: string }).clientVersion;
+  }
+
+  return details;
+}
+
 export async function getCurrentUser() {
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
@@ -18,47 +37,54 @@ export async function getCurrentUser() {
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
   const displayName = getDefaultDisplayName(clerkUser);
 
-  const existingByClerkId = await db.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
+  try {
+    const existingByClerkId = await db.user.findUnique({
+      where: { clerkId: clerkUser.id },
+    });
 
-  if (existingByClerkId) {
-    return db.user.update({
-      where: { id: existingByClerkId.id },
+    if (existingByClerkId) {
+      return db.user.update({
+        where: { id: existingByClerkId.id },
+        data: {
+          email,
+          avatarUrl: clerkUser.imageUrl,
+        },
+      });
+    }
+
+    if (email) {
+      const existingByEmail = await db.user.findUnique({
+        where: { email },
+      });
+
+      if (existingByEmail) {
+        return db.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            clerkId: clerkUser.id,
+            avatarUrl: clerkUser.imageUrl,
+            email,
+          },
+        });
+      }
+    }
+
+    return db.user.create({
       data: {
+        clerkId: clerkUser.id,
+        name: displayName,
         email,
         avatarUrl: clerkUser.imageUrl,
       },
     });
-  }
-
-  if (email) {
-    const existingByEmail = await db.user.findUnique({
-      where: { email },
-    });
-
-    if (existingByEmail) {
-      return db.user.update({
-        where: { id: existingByEmail.id },
-        data: {
-          clerkId: clerkUser.id,
-          avatarUrl: clerkUser.imageUrl,
-          email,
-        },
-      });
-    }
-  }
-
-  const user = await db.user.create({
-    data: {
+  } catch (error) {
+    console.error("[auth] getCurrentUser failed", {
       clerkId: clerkUser.id,
-      name: displayName,
       email,
-      avatarUrl: clerkUser.imageUrl,
-    },
-  });
-
-  return user;
+      ...getErrorDetails(error),
+    });
+    throw error;
+  }
 }
 
 export async function requireAuth() {
