@@ -1,5 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { getRuntimeDatabaseUrl } from "@/lib/db";
 
 function getDefaultDisplayName(clerkUser: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
   return (
@@ -31,7 +32,7 @@ function getErrorDetails(error: unknown) {
 }
 
 function getDatabaseHost() {
-  const url = process.env.DATABASE_URL;
+  const url = getRuntimeDatabaseUrl();
   if (!url) return null;
 
   try {

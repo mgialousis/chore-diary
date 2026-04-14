@@ -5,7 +5,6 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function shouldUseSupabasePooler(url: URL) {
   return (
-    process.env.VERCEL === "1" &&
     url.hostname.startsWith("db.") &&
     url.hostname.endsWith(".supabase.co") &&
     (url.port === "" || url.port === "5432") &&
@@ -28,7 +27,7 @@ function deriveSupabasePoolerUrl(url: URL) {
   return pooledUrl.toString();
 }
 
-function getRuntimeDatabaseUrl() {
+export function getRuntimeDatabaseUrl() {
   const rawUrl = process.env.DATABASE_URL;
 
   if (!rawUrl) {
