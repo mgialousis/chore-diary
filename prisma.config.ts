@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
-    // @ts-ignore earlyAccess is a Prisma 7 early-access flag not yet in stable types
+    // @ts-expect-error earlyAccess is a Prisma 7 early-access flag not yet in stable types
     earlyAccess: true,
     schema: fileURLToPath(new URL("./prisma/schema.prisma", import.meta.url)),
     datasource: {

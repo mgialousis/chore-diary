@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type {
+  ActivityLog,
   ChoreInstance,
   ChoreTemplate,
+  GroceryItem,
+  MealPlan,
   Recipe,
   RecipeIngredient,
   User,
@@ -78,3 +81,37 @@ export type RecipeWithIngredients = Recipe & {
   ingredients: RecipeIngredient[];
   createdBy: User;
 };
+
+// ─── Meal Plan Schemas ──────────────────────────────────────
+
+export const mealPlanSchema = z
+  .object({
+    date: z.date(),
+    mealSlot: z.enum(["LUNCH", "DINNER"]),
+    recipeId: z.string().nullable(),
+    customMealName: z.string().max(200).nullable(),
+    assignedUserId: z.string().nullable(),
+    servings: z.number().min(1).max(20),
+    notes: z.string().max(500).optional(),
+  })
+  .refine((data) => data.recipeId || data.customMealName, {
+    message: "Either select a recipe or enter a custom meal name",
+    path: ["customMealName"],
+  });
+
+export type MealPlanFormValues = z.infer<typeof mealPlanSchema>;
+
+export type MealPlanWithDetails = MealPlan & {
+  recipe: Recipe | null;
+  assignedTo: User | null;
+  cookedBy: User | null;
+};
+
+export type ActivityLogWithUser = ActivityLog & {
+  user: User;
+};
+
+export type GroceryItemSummary = Pick<
+  GroceryItem,
+  "id" | "name" | "quantity" | "unit" | "category" | "checked" | "status"
+>;

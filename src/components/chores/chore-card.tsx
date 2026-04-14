@@ -95,7 +95,9 @@ export function ChoreCard({
           isOverdue && optimisticStatus === "PENDING" ? "text-red-600 font-medium" : "text-muted-foreground",
         )}>
           {isDone && chore.completedBy
-            ? `Completed by ${chore.completedBy.name}`
+            ? `Completed by ${chore.completedBy.name}${chore.completedAt ? ` • ${formatDistanceToNow(new Date(chore.completedAt), { addSuffix: true })}` : ""}`
+            : isSkipped
+              ? "Skipped"
             : formatDueDate(dueDate)}
         </p>
       </button>

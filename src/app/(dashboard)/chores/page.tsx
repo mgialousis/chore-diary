@@ -1,12 +1,12 @@
 import { db } from "@/lib/db";
 import { requireHousehold } from "@/lib/household";
 import { getHouseholdMembers } from "@/lib/household";
-import { startOfDay } from "date-fns";
 import { ChoreList } from "@/components/chores/chore-list";
+import { toDateOnly } from "@/lib/date";
 
 export default async function ChoresPage() {
   const { user, household } = await requireHousehold();
-  const today = startOfDay(new Date());
+  const today = toDateOnly(new Date());
 
   const [dueToday, upcoming, overdue, recentlyCompleted, members] =
     await Promise.all([
@@ -44,7 +44,7 @@ export default async function ChoresPage() {
           status: { in: ["COMPLETED", "SKIPPED"] },
         },
         include: { choreTemplate: true, completedBy: true },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
         take: 10,
       }),
       getHouseholdMembers(household.id),

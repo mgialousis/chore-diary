@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getIngredientSuggestions } from "@/actions/recipes";
-import type { UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 import type { RecipeFormValues } from "@/types";
 
 const UNITS = [
@@ -46,12 +46,18 @@ export function IngredientInput({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const nameValue = form.watch(`ingredients.${index}.ingredientName`);
+  const nameValue = useWatch({
+    control: form.control,
+    name: `ingredients.${index}.ingredientName`,
+  });
+  const unitValue = useWatch({
+    control: form.control,
+    name: `ingredients.${index}.unit`,
+  });
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!nameValue || nameValue.length < 1) {
-      setSuggestions([]);
       return;
     }
     debounceRef.current = setTimeout(async () => {
@@ -76,6 +82,9 @@ export function IngredientInput({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const shouldShowSuggestions =
+    showSuggestions && !!nameValue && nameValue.length > 0 && suggestions.length > 0;
+
   return (
     <div className="flex items-start gap-2">
       {/* Quantity */}
@@ -91,7 +100,7 @@ export function IngredientInput({
 
       {/* Unit */}
       <Select
-        value={form.watch(`ingredients.${index}.unit`) ?? "taste"}
+        value={unitValue ?? "taste"}
         onValueChange={(v) =>
           form.setValue(`ingredients.${index}.unit`, v === "taste" ? null : v)
         }
@@ -115,9 +124,13 @@ export function IngredientInput({
           placeholder="Ingredient name"
           autoComplete="off"
           {...form.register(`ingredients.${index}.ingredientName`)}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onFocus={() => {
+            if (nameValue && suggestions.length > 0) {
+              setShowSuggestions(true);
+            }
+          }}
         />
-        {showSuggestions && (
+        {shouldShowSuggestions && (
           <ul className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md">
             {suggestions.map((s) => (
               <li key={s}>

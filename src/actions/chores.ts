@@ -4,20 +4,43 @@ import { db } from "@/lib/db";
 import { requireHousehold } from "@/lib/household";
 import { logActivity } from "@/actions/activity";
 import { choreTemplateSchema, type ChoreTemplateFormValues } from "@/types";
+import { toDateOnly } from "@/lib/date";
 import { revalidatePath } from "next/cache";
-import { addDays, startOfDay, getDay } from "date-fns";
+import { addDays, differenceInCalendarDays, getDay } from "date-fns";
 import type { ChoreTemplate } from "@prisma/client";
 
 // ─── Instance Generation ────────────────────────────────────
 
+function getIntervalAlignedDate(anchor: Date, from: Date, stepDays: number) {
+  if (anchor >= from) return anchor;
+
+  const daysSinceAnchor = differenceInCalendarDays(from, anchor);
+  const stepsToAdvance = Math.ceil(daysSinceAnchor / stepDays);
+
+  return addDays(anchor, stepsToAdvance * stepDays);
+}
+
+function getNextSpecificDayAfter(date: Date, daysOfWeek: number[]) {
+  let candidate = addDays(date, 1);
+
+  while (!daysOfWeek.includes(getDay(candidate))) {
+    candidate = addDays(candidate, 1);
+  }
+
+  return candidate;
+}
+
 async function generateChoreInstances(template: ChoreTemplate) {
-  const today = startOfDay(new Date());
-  const horizon = addDays(today, 14);
-  const startDate = startOfDay(
+  const today = toDateOnly(new Date());
+  const horizon = toDateOnly(addDays(today, 14));
+  const startDate = toDateOnly(
     template.nextDueDate ? new Date(template.nextDueDate) : today,
   );
 
   const dueDates: Date[] = [];
+  let nextDueDate: Date | null = template.nextDueDate
+    ? toDateOnly(new Date(template.nextDueDate))
+    : null;
 
   switch (template.recurrenceType) {
     case "NONE": {
@@ -25,35 +48,43 @@ async function generateChoreInstances(template: ChoreTemplate) {
       if (startDate >= today && startDate <= horizon) {
         dueDates.push(startDate);
       }
+      nextDueDate = dueDates.length > 0 ? null : startDate;
       break;
     }
     case "DAILY": {
-      let d = startDate < today ? today : startDate;
+      let d = getIntervalAlignedDate(startDate, today, 1);
       while (d <= horizon) {
         dueDates.push(d);
         d = addDays(d, 1);
       }
+      nextDueDate = d;
       break;
     }
     case "EVERY_N_DAYS": {
       const interval = template.recurrenceInterval ?? 1;
-      let d = startDate < today ? today : startDate;
+      let d = getIntervalAlignedDate(startDate, today, interval);
       while (d <= horizon) {
         dueDates.push(d);
         d = addDays(d, interval);
       }
+      nextDueDate = d;
       break;
     }
     case "WEEKLY": {
-      let d = startDate < today ? today : startDate;
+      let d = getIntervalAlignedDate(startDate, today, 7);
       while (d <= horizon) {
         dueDates.push(d);
         d = addDays(d, 7);
       }
+      nextDueDate = d;
       break;
     }
     case "SPECIFIC_DAYS": {
       const days = template.daysOfWeek;
+      if (days.length === 0) {
+        return;
+      }
+
       let d = startDate < today ? today : startDate;
       while (d <= horizon) {
         if (days.includes(getDay(d))) {
@@ -61,6 +92,10 @@ async function generateChoreInstances(template: ChoreTemplate) {
         }
         d = addDays(d, 1);
       }
+      nextDueDate =
+        dueDates.length > 0
+          ? getNextSpecificDayAfter(dueDates[dueDates.length - 1], days)
+          : startDate;
       break;
     }
   }
@@ -74,15 +109,14 @@ async function generateChoreInstances(template: ChoreTemplate) {
       name: template.name,
       category: template.category,
       assignedUserId: template.assignedUserId,
-      dueDate: date,
+      dueDate: toDateOnly(date),
     })),
     skipDuplicates: true,
   });
 
-  const nextDue = dueDates[dueDates.length - 1];
   await db.choreTemplate.update({
     where: { id: template.id },
-    data: { nextDueDate: addDays(nextDue, template.recurrenceInterval ?? 1) },
+    data: { nextDueDate: nextDueDate ? toDateOnly(nextDueDate) : null },
   });
 }
 
@@ -105,7 +139,7 @@ export async function createChoreTemplate(data: ChoreTemplateFormValues) {
       recurrenceType: parsed.data.recurrenceType,
       recurrenceInterval: parsed.data.recurrenceInterval,
       daysOfWeek: parsed.data.daysOfWeek,
-      nextDueDate: parsed.data.startDate,
+      nextDueDate: toDateOnly(parsed.data.startDate),
       notes: parsed.data.notes,
     },
   });
@@ -136,7 +170,7 @@ export async function updateChoreTemplate(
       recurrenceType: data.recurrenceType,
       recurrenceInterval: data.recurrenceInterval,
       daysOfWeek: data.daysOfWeek,
-      nextDueDate: data.startDate,
+      nextDueDate: data.startDate ? toDateOnly(data.startDate) : undefined,
       notes: data.notes,
     },
   });
@@ -147,7 +181,7 @@ export async function updateChoreTemplate(
       choreTemplateId: templateId,
       householdId: household.id,
       status: "PENDING",
-      dueDate: { gte: startOfDay(new Date()) },
+      dueDate: { gte: toDateOnly(new Date()) },
     },
   });
 
@@ -177,7 +211,7 @@ export async function toggleChoreTemplateActive(templateId: string) {
         choreTemplateId: templateId,
         householdId: household.id,
         status: "PENDING",
-        dueDate: { gte: startOfDay(new Date()) },
+        dueDate: { gte: toDateOnly(new Date()) },
       },
     });
   } else {
@@ -186,6 +220,7 @@ export async function toggleChoreTemplateActive(templateId: string) {
   }
 
   revalidatePath("/chores");
+  revalidatePath("/today");
 }
 
 export async function completeChore(choreInstanceId: string): Promise<{ error?: string } | void> {

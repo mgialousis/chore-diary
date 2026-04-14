@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -72,8 +72,26 @@ export function ChoreForm({
     },
   });
 
-  const recurrenceType = form.watch("recurrenceType");
-  const daysOfWeek = form.watch("daysOfWeek");
+  const recurrenceType = useWatch({
+    control: form.control,
+    name: "recurrenceType",
+  });
+  const daysOfWeek = useWatch({
+    control: form.control,
+    name: "daysOfWeek",
+  });
+  const category = useWatch({
+    control: form.control,
+    name: "category",
+  });
+  const assignedUserId = useWatch({
+    control: form.control,
+    name: "assignedUserId",
+  });
+  const startDate = useWatch({
+    control: form.control,
+    name: "startDate",
+  });
 
   async function onSubmit(data: ChoreTemplateFormValues) {
     try {
@@ -114,7 +132,7 @@ export function ChoreForm({
       <div className="space-y-1.5">
         <Label>Category</Label>
         <Select
-          value={form.watch("category")}
+          value={category}
           onValueChange={(v) => form.setValue("category", v as typeof choreCategories[number])}
         >
           <SelectTrigger>
@@ -132,7 +150,7 @@ export function ChoreForm({
       <div className="space-y-1.5">
         <Label>Assigned to</Label>
         <Select
-          value={form.watch("assignedUserId") ?? "unassigned"}
+          value={assignedUserId ?? "unassigned"}
           onValueChange={(v) => form.setValue("assignedUserId", v === "unassigned" ? null : v)}
         >
           <SelectTrigger>
@@ -203,8 +221,8 @@ export function ChoreForm({
         <Input
           id="startDate"
           type="date"
-          value={form.watch("startDate") instanceof Date
-            ? form.watch("startDate").toISOString().split("T")[0]
+          value={startDate instanceof Date
+            ? startDate.toISOString().split("T")[0]
             : ""}
           onChange={(e) => form.setValue("startDate", new Date(e.target.value))}
         />

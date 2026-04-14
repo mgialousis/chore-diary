@@ -1,6 +1,7 @@
 "use client";
 
-import { useFieldArray, useForm } from "react-hook-form";
+import { useState } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ export function RecipeForm({
 }) {
   const router = useRouter();
   const isEditing = !!recipeId;
+  const [customTag, setCustomTag] = useState("");
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
@@ -60,7 +62,14 @@ export function RecipeForm({
     name: "ingredients",
   });
 
-  const tags = form.watch("tags");
+  const tags = useWatch({
+    control: form.control,
+    name: "tags",
+  });
+  const mealType = useWatch({
+    control: form.control,
+    name: "mealType",
+  });
 
   function toggleTag(tag: string) {
     const current = tags ?? [];
@@ -68,6 +77,17 @@ export function RecipeForm({
       ? current.filter((t) => t !== tag)
       : [...current, tag];
     form.setValue("tags", next);
+  }
+
+  function addCustomTag() {
+    const nextTag = customTag.trim();
+    if (!nextTag) return;
+
+    const current = tags ?? [];
+    if (!current.includes(nextTag)) {
+      form.setValue("tags", [...current, nextTag]);
+    }
+    setCustomTag("");
   }
 
   async function onSubmit(data: RecipeFormValues) {
@@ -136,7 +156,7 @@ export function RecipeForm({
         <div className="space-y-1.5">
           <Label>Meal type</Label>
           <Select
-            value={form.watch("mealType") ?? "both"}
+            value={mealType ?? "both"}
             onValueChange={(v) =>
               form.setValue("mealType", v === "both" ? null : (v as "LUNCH" | "DINNER"))
             }
@@ -167,6 +187,22 @@ export function RecipeForm({
               {tag}
             </Badge>
           ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={customTag}
+            onChange={(event) => setCustomTag(event.target.value)}
+            placeholder="Add custom tag"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addCustomTag();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={addCustomTag}>
+            Add tag
+          </Button>
         </div>
       </div>
 
