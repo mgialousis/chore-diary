@@ -2,13 +2,19 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { fileURLToPath } from "node:url";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+
+const prismaCliUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+
+if (!prismaCliUrl) {
+  throw new Error("DIRECT_URL or DATABASE_URL is required for Prisma CLI.");
+}
 
 export default defineConfig({
     // @ts-expect-error earlyAccess is a Prisma 7 early-access flag not yet in stable types
     earlyAccess: true,
     schema: fileURLToPath(new URL("./prisma/schema.prisma", import.meta.url)),
     datasource: {
-        url: env("DATABASE_URL"),
+        url: prismaCliUrl,
     },
 });

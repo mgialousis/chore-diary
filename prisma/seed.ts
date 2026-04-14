@@ -8,11 +8,15 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required to run prisma/seed.ts");
+const seedDatabaseUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+
+if (!seedDatabaseUrl) {
+  throw new Error("DIRECT_URL or DATABASE_URL is required to run prisma/seed.ts");
 }
 
-const adapter = new PrismaPg(process.env.DATABASE_URL);
+const adapter = new PrismaPg({
+  connectionString: seedDatabaseUrl,
+});
 const db = new PrismaClient({ adapter });
 
 type SampleRecipe = {
