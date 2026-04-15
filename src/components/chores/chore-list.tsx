@@ -345,10 +345,24 @@ export function ChoreList({
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Chores</h1>
-        <div className="flex items-center gap-2">
-          <div className="hidden rounded-full border bg-muted/30 p-1 md:flex">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Chores</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              className="hidden md:flex gap-2"
+              onClick={() => {
+                setCreateDate(new Date());
+                setIsCreateOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Add chore
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex rounded-full border bg-muted/30 p-1">
             <Button
               variant={view === "list" ? "default" : "ghost"}
               size="sm"
@@ -368,16 +382,6 @@ export function ChoreList({
               Calendar
             </Button>
           </div>
-          <Button
-            className="hidden md:flex gap-2"
-            onClick={() => {
-              setCreateDate(new Date());
-              setIsCreateOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Add chore
-          </Button>
         </div>
       </div>
 

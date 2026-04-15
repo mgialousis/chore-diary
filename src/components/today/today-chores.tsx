@@ -56,14 +56,14 @@ function ChoreRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 py-2.5 border-b last:border-0",
+        "flex items-center gap-3 py-3 first:pt-0 last:border-0 last:pb-0 border-b",
         overdue && "opacity-90",
       )}
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{name}</p>
+        <p className="truncate text-sm font-semibold tracking-tight">{name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <Badge variant="secondary" className={cn("text-xs py-0", CATEGORY_COLORS[category])}>
+          <Badge variant="secondary" className={cn("py-0 text-[11px]", CATEGORY_COLORS[category])}>
             {category.replace(/_/g, " ")}
           </Badge>
           {overdue && (
@@ -77,7 +77,7 @@ function ChoreRow({
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 px-2 text-xs text-green-700 hover:bg-green-50"
+          className="h-7 rounded-full px-2.5 text-[11px] text-emerald-700 hover:bg-emerald-50"
           onClick={handleDone}
           disabled={isPending}
         >
@@ -87,7 +87,7 @@ function ChoreRow({
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted"
+          className="h-7 rounded-full px-2.5 text-[11px] text-muted-foreground hover:bg-muted"
           onClick={() => setPostponeOpen(true)}
           disabled={isPending}
         >
@@ -116,17 +116,19 @@ export function TodayChores({
   overdueChores: ChoreInstanceWithTemplate[];
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Due today */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <div className="flex items-center gap-2">
           <CheckSquare className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">Chores Due Today</h2>
         </div>
         {dueChores.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2">Nothing due today!</p>
+          <div className="rounded-2xl border border-dashed bg-background/80 p-4 text-sm text-muted-foreground">
+            Nothing due today.
+          </div>
         ) : (
-          <div className="rounded-xl border px-3">
+          <div className="rounded-3xl border bg-card/90 px-4 py-3 shadow-sm">
             {dueChores.map((chore) => (
               <ChoreRow key={chore.id} chore={chore} />
             ))}
@@ -136,12 +138,12 @@ export function TodayChores({
 
       {/* Overdue */}
       {overdueChores.length > 0 && (
-        <section className="space-y-2">
+        <section className="space-y-3">
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
             <h2 className="font-semibold">Overdue</h2>
           </div>
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3">
+          <div className="rounded-3xl border border-destructive/20 bg-red-50/50 px-4 py-3 shadow-sm">
             {overdueChores.map((chore) => (
               <ChoreRow key={chore.id} chore={chore} overdue />
             ))}

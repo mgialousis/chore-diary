@@ -31,10 +31,10 @@ function GroceryRow({ item }: { item: GroceryItemSummary }) {
   }
 
   return (
-    <div className={cn("flex items-start gap-3 py-2.5", isPending && "opacity-60")}>
+    <div className={cn("flex items-start gap-3 py-3 first:pt-0 last:pb-0", isPending && "opacity-60")}>
       <Checkbox checked={checked} onCheckedChange={handleToggle} className="mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className={cn("text-sm font-medium", checked && "text-muted-foreground line-through")}>
+        <p className={cn("text-sm font-semibold tracking-tight", checked && "text-muted-foreground line-through")}>
           {quantity} {item.unit ?? ""} {item.name}
         </p>
       </div>
@@ -44,7 +44,7 @@ function GroceryRow({ item }: { item: GroceryItemSummary }) {
 
 export function TodayGroceries({ items }: { items: GroceryItemSummary[] }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-muted-foreground" />
@@ -56,11 +56,11 @@ export function TodayGroceries({ items }: { items: GroceryItemSummary[] }) {
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed bg-background/80 p-4 text-sm text-muted-foreground">
           No grocery items right now.
         </div>
       ) : (
-        <div className="rounded-xl border px-3">
+        <div className="rounded-3xl border bg-card/90 px-4 py-3 shadow-sm">
           {items.map((item) => (
             <GroceryRow key={item.id} item={item} />
           ))}

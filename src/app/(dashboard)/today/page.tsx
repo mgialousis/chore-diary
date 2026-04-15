@@ -73,11 +73,16 @@ export default async function TodayPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">{getGreeting(user.name)}</h1>
-        <p className="text-sm text-muted-foreground">
-          Here&apos;s what needs attention today.
-        </p>
+      <div className="rounded-3xl border bg-gradient-to-r from-amber-50 via-background to-sky-50 p-6 shadow-sm">
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            Daily overview
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{getGreeting(user.name)}</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Here&apos;s what needs attention today across meals, chores, and groceries.
+          </p>
+        </div>
       </div>
 
       <TodayMeals meals={todayMeals} />
