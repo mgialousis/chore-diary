@@ -1,14 +1,15 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
-import { CheckSquare, Check, SkipForward, AlertTriangle } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
+import { CheckSquare, Check, Clock3, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { completeChore, skipChore } from "@/actions/chores";
+import { completeChore } from "@/actions/chores";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ChoreInstanceWithTemplate } from "@/types";
+import { PostponeChoreDialog } from "@/components/chores/postpone-chore-dialog";
 
 const CATEGORY_COLORS: Record<string, string> = {
   COOKING: "bg-orange-100 text-orange-800",
@@ -31,6 +32,8 @@ function ChoreRow({
   overdue?: boolean;
 }) {
   const [optimisticDone, setOptimisticDone] = useOptimistic(false);
+  const [optimisticPostponed, setOptimisticPostponed] = useOptimistic(false);
+  const [postponeOpen, setPostponeOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleDone() {
@@ -45,14 +48,7 @@ function ChoreRow({
     });
   }
 
-  function handleSkip() {
-    startTransition(async () => {
-      await skipChore(chore.id);
-      toast.success("Chore skipped");
-    });
-  }
-
-  if (optimisticDone) return null;
+  if (optimisticDone || optimisticPostponed) return null;
 
   const name = chore.choreTemplate?.name ?? chore.name;
   const category = chore.category;
@@ -92,12 +88,22 @@ function ChoreRow({
           size="sm"
           variant="ghost"
           className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted"
-          onClick={handleSkip}
+          onClick={() => setPostponeOpen(true)}
           disabled={isPending}
         >
-          <SkipForward className="h-3.5 w-3.5" />
+          <Clock3 className="h-3.5 w-3.5 mr-1" />
+          Postpone
         </Button>
       </div>
+      <PostponeChoreDialog
+        open={postponeOpen}
+        onOpenChange={setPostponeOpen}
+        choreId={chore.id}
+        choreName={name}
+        onSuccess={() => {
+          setOptimisticPostponed(true);
+        }}
+      />
     </div>
   );
 }

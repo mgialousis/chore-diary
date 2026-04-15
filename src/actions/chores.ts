@@ -268,3 +268,82 @@ export async function skipChore(choreInstanceId: string): Promise<{ error?: stri
   revalidatePath("/chores");
   revalidatePath("/today");
 }
+
+export async function postponeChore(
+  choreInstanceId: string,
+  targetDate: Date,
+): Promise<{ error?: string } | void> {
+  const { user, household } = await requireHousehold();
+
+  const normalizedTargetDate = toDateOnly(targetDate);
+  const tomorrow = toDateOnly(addDays(new Date(), 1));
+
+  if (normalizedTargetDate < tomorrow) {
+    return { error: "Please choose tomorrow or a later date" };
+  }
+
+  const existing = await db.choreInstance.findFirst({
+    where: { id: choreInstanceId, householdId: household.id },
+  });
+
+  if (!existing) return { error: "Chore not found" };
+
+  const chore = await db.choreInstance.update({
+    where: { id: choreInstanceId, householdId: household.id },
+    data: {
+      dueDate: normalizedTargetDate,
+      status: "PENDING",
+      completedAt: null,
+      completedByUserId: null,
+    },
+  });
+
+  await logActivity({
+    householdId: household.id,
+    userId: user.id,
+    eventType: "CHORE_POSTPONED",
+    entityType: "chore",
+    entityId: chore.id,
+    message: `${user.name} postponed ${chore.name} to ${normalizedTargetDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`,
+  });
+
+  revalidatePath("/chores");
+  revalidatePath("/today");
+}
+
+export async function deleteChoreTemplate(templateId: string): Promise<{ error?: string } | void> {
+  const { user, household } = await requireHousehold();
+
+  const template = await db.choreTemplate.findFirst({
+    where: { id: templateId, householdId: household.id },
+  });
+
+  if (!template) return { error: "Chore not found" };
+
+  await db.choreInstance.deleteMany({
+    where: {
+      householdId: household.id,
+      choreTemplateId: templateId,
+    },
+  });
+
+  await db.choreTemplate.delete({
+    where: { id: templateId },
+  });
+
+  await logActivity({
+    householdId: household.id,
+    userId: user.id,
+    eventType: "CHORE_DELETED",
+    entityType: "chore",
+    entityId: templateId,
+    message: `${user.name} deleted ${template.name}`,
+  });
+
+  revalidatePath("/chores");
+  revalidatePath("/today");
+}

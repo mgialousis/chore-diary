@@ -77,6 +77,10 @@ export type ChoreInstanceWithTemplate = ChoreInstance & {
   completedBy: User | null;
 };
 
+export type InactiveChoreTemplate = ChoreTemplate & {
+  assignedUser: User | null;
+};
+
 export type RecipeWithIngredients = Recipe & {
   ingredients: RecipeIngredient[];
   createdBy: User;

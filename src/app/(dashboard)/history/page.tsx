@@ -7,7 +7,7 @@ import { StatsCards } from "@/components/history/stats-cards";
 
 const FILTERS: Record<string, EventType[] | undefined> = {
   all: undefined,
-  chores: ["CHORE_COMPLETED", "CHORE_SKIPPED"],
+  chores: ["CHORE_COMPLETED", "CHORE_SKIPPED", "CHORE_POSTPONED", "CHORE_DELETED"],
   meals: ["MEAL_PLANNED", "MEAL_COOKED"],
   groceries: ["GROCERY_ADDED", "GROCERY_BOUGHT"],
 };
