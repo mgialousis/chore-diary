@@ -45,10 +45,22 @@ export default async function MealsPage({
   ]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Meal Planner</h1>
+    <div className="space-y-5 p-4 md:p-6">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          Weekly kitchen rhythm
+        </p>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">Meal Planner</h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Plan lunches and dinners for the week, assign cooks, and keep the grocery list in sync.
+            </p>
+          </div>
+        </div>
+      </div>
       {meals.length === 0 && (
-        <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-dashed bg-muted/20 p-6 text-center text-muted-foreground">
           <p>No meals planned this week. Start planning!</p>
         </div>
       )}

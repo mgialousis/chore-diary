@@ -1,6 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
+import Link from "next/link";
 import { addDays, format, parseISO } from "date-fns";
 import { Check, Copy, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -165,9 +166,12 @@ export function MealSlotCell({
       <>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex h-full min-h-[5rem] w-full items-center justify-center rounded-lg border border-dashed text-muted-foreground transition-colors hover:bg-muted/50"
+          className="group flex h-full min-h-[6.75rem] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border/80 bg-background/60 text-muted-foreground transition-all hover:border-foreground/30 hover:bg-muted/30"
         >
-          <Plus className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border bg-background shadow-sm transition-transform group-hover:scale-105">
+            <Plus className="h-4 w-4" />
+          </div>
+          <span className="text-xs font-medium">{slot === "LUNCH" ? "Add lunch" : "Add dinner"}</span>
         </button>
         <MealFormModal
           key={`${date.toISOString()}-${slot}-${modalOpen ? "open" : "closed"}-new`}
@@ -192,25 +196,37 @@ export function MealSlotCell({
     <>
       <div
         className={cn(
-          "relative flex flex-col gap-1 rounded-lg border p-2.5 transition-all",
-          isCooked && "border-green-200 bg-green-50/60",
+          "relative flex min-h-[6.75rem] flex-col gap-2 rounded-2xl border bg-card/95 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+          isCooked && "border-emerald-200 bg-emerald-50/70",
+          !isCooked && "border-border/80",
           isPending && "opacity-60",
         )}
       >
         {isCooked && (
-          <div className="absolute right-1.5 top-1.5">
-            <Check className="h-3.5 w-3.5 text-green-600" />
+          <div className="absolute right-2 top-2">
+            <Check className="h-3.5 w-3.5 text-emerald-600" />
           </div>
         )}
 
-        <p className="line-clamp-2 pr-4 text-sm font-medium leading-tight">{mealName}</p>
+        {meal.recipe ? (
+          <Link
+            href={`/recipes/${meal.recipe.id}`}
+            className="line-clamp-2 pr-5 text-sm font-semibold leading-tight tracking-tight underline-offset-4 hover:underline"
+          >
+            {mealName}
+          </Link>
+        ) : (
+          <p className="line-clamp-2 pr-5 text-sm font-semibold leading-tight tracking-tight">{mealName}</p>
+        )}
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">{meal.servings} srv</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {meal.servings} srv
+          </span>
           {meal.assignedTo && assignedUserColors && (
             <div
               className={cn(
-                "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs",
+                "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px]",
                 assignedUserColors.pill,
               )}
             >
@@ -225,20 +241,24 @@ export function MealSlotCell({
               <span>{meal.assignedTo.name.split(" ")[0]}</span>
             </div>
           )}
-          {!isCooked && <Badge variant="secondary" className="py-0 text-xs">Planned</Badge>}
+          {!isCooked && (
+            <Badge variant="secondary" className="rounded-full bg-slate-100 py-0 text-[11px] text-slate-700">
+              Planned
+            </Badge>
+          )}
           {isCooked && (
-            <Badge variant="secondary" className="bg-green-100 py-0 text-xs text-green-800">
+            <Badge variant="secondary" className="rounded-full bg-emerald-100 py-0 text-[11px] text-emerald-800">
               Cooked
             </Badge>
           )}
         </div>
 
-        <div className="mt-0.5 flex items-center gap-1">
+        <div className="mt-auto flex items-center gap-1">
           {!isCooked && (
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-2 text-xs text-green-700 hover:bg-green-100"
+              className="h-7 rounded-full px-2.5 text-[11px] text-emerald-700 hover:bg-emerald-100"
               onClick={handleCooked}
               disabled={isPending}
             >
@@ -248,7 +268,7 @@ export function MealSlotCell({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="ml-auto h-6 px-1.5 text-xs">
+              <Button size="sm" variant="ghost" className="ml-auto h-7 rounded-full px-2 text-[11px]">
                 •••
               </Button>
             </DropdownMenuTrigger>

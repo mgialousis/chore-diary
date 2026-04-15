@@ -30,7 +30,6 @@ export function IngredientNameInput({
     debounceRef.current = setTimeout(async () => {
       const results = await getIngredientSuggestions(value);
       setSuggestions(results);
-      setShowSuggestions(true);
     }, 200);
 
     return () => {

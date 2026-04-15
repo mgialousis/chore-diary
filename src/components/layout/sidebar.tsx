@@ -42,11 +42,13 @@ export function Sidebar({
   householdName,
   inviteCode,
   userName,
+  userEmail,
   avatarUrl,
 }: {
   householdName: string;
   inviteCode: string;
   userName: string;
+  userEmail: string;
   avatarUrl: string | null;
 }) {
   const pathname = usePathname();
@@ -158,17 +160,29 @@ export function Sidebar({
           <DialogHeader>
             <DialogTitle>Edit display name</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="display-name">Name</Label>
-            <Input
-              id="display-name"
-              value={name}
+        <div className="space-y-2">
+          <Label htmlFor="display-name">Name</Label>
+          <Input
+            id="display-name"
+            value={name}
               onChange={(event) => setName(event.target.value)}
-              maxLength={50}
-              placeholder="Your name"
-            />
-          </div>
-          <DialogFooter>
+            maxLength={50}
+            placeholder="Your name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="account-email">Email</Label>
+          <Input
+            id="account-email"
+            value={userEmail}
+            readOnly
+            disabled
+          />
+          <p className="text-xs text-muted-foreground">
+            This is the account email linked to your profile.
+          </p>
+        </div>
+        <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>

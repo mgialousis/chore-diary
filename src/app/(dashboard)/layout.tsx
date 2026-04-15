@@ -15,6 +15,7 @@ export default async function DashboardLayout({
         householdName={household.name}
         inviteCode={household.inviteCode}
         userName={user.name}
+        userEmail={user.email}
         avatarUrl={user.avatarUrl}
       />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">

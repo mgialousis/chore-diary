@@ -213,9 +213,7 @@ export async function toggleGroceryItemChecked(itemId: string) {
   if (!item) return { error: "Item not found" };
 
   const nextChecked = !item.checked;
-  const nextStatus = item.status === "BOUGHT" && !nextChecked
-    ? "NEEDED"
-    : item.status;
+  const nextStatus = nextChecked ? "BOUGHT" : "NEEDED";
 
   await db.groceryItem.update({
     where: { id: itemId },
