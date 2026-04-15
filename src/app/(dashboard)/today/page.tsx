@@ -44,30 +44,32 @@ async function runTodayQuery<T>(label: string, query: () => Promise<T>) {
 export default async function TodayPage() {
   const { user, household } = await requireHousehold();
   const today = toDateOnly(new Date());
-  const todayMeals = await runTodayQuery("todayMeals", () =>
-    db.mealPlan.findMany({
-      where: { householdId: household.id, date: today },
-      include: { recipe: true, assignedTo: true, cookedBy: true },
-      orderBy: { mealSlot: "asc" },
-    }));
-  const dueChores = await runTodayQuery("dueChores", () =>
-    db.choreInstance.findMany({
-      where: { householdId: household.id, dueDate: today, status: "PENDING" },
-      include: { choreTemplate: true, completedBy: true },
-      orderBy: { dueDate: "asc" },
-    }));
-  const overdueChores = await runTodayQuery("overdueChores", () =>
-    db.choreInstance.findMany({
-      where: { householdId: household.id, dueDate: { lt: today }, status: "PENDING" },
-      include: { choreTemplate: true, completedBy: true },
-      orderBy: { dueDate: "asc" },
-    }));
-  const groceryItems = await runTodayQuery("groceryItems", () =>
-    db.groceryItem.findMany({
-      where: { householdId: household.id, status: "NEEDED", checked: false },
-      orderBy: [{ category: "asc" }, { createdAt: "desc" }],
-      take: 10,
-    }));
+  const [todayMeals, dueChores, overdueChores, groceryItems] = await Promise.all([
+    runTodayQuery("todayMeals", () =>
+      db.mealPlan.findMany({
+        where: { householdId: household.id, date: today },
+        include: { recipe: true, assignedTo: true, cookedBy: true },
+        orderBy: { mealSlot: "asc" },
+      })),
+    runTodayQuery("dueChores", () =>
+      db.choreInstance.findMany({
+        where: { householdId: household.id, dueDate: today, status: "PENDING" },
+        include: { choreTemplate: true, completedBy: true },
+        orderBy: { dueDate: "asc" },
+      })),
+    runTodayQuery("overdueChores", () =>
+      db.choreInstance.findMany({
+        where: { householdId: household.id, dueDate: { lt: today }, status: "PENDING" },
+        include: { choreTemplate: true, completedBy: true },
+        orderBy: { dueDate: "asc" },
+      })),
+    runTodayQuery("groceryItems", () =>
+      db.groceryItem.findMany({
+        where: { householdId: household.id, status: "NEEDED", checked: false },
+        orderBy: [{ category: "asc" }, { createdAt: "desc" }],
+        take: 10,
+      })),
+  ]);
 
   return (
     <div className="space-y-6 p-4 md:p-6">

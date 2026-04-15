@@ -80,6 +80,7 @@ enum EventType {
   GROCERY_BOUGHT
   GROCERY_ADDED
   RECIPE_CREATED
+  RECIPE_DELETED
 }
 
 enum HouseholdRole {

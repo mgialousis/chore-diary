@@ -8,19 +8,26 @@ This document defines the folder structure, naming patterns, component patterns,
 
 | Layer          | Choice                          | Notes                                      |
 |----------------|----------------------------------|---------------------------------------------|
-| Framework      | Next.js 14+ (App Router)        | Use `src/` directory                        |
+| Framework      | Next.js 16 (App Router)         | Use `src/` directory                        |
 | Language       | TypeScript (strict mode)        | No `any` types                              |
-| Database       | PostgreSQL                      | Supabase or Neon                            |
-| ORM            | Prisma                          | Schema in `prisma/schema.prisma`            |
-| Auth           | Clerk (`@clerk/nextjs`)         | Middleware-based route protection           |
-| UI Components  | shadcn/ui                       | Installed into `src/components/ui/`         |
+| Database       | PostgreSQL (Supabase)           |                                             |
+| ORM            | Prisma 7                        | Config in `prisma.config.ts`, pg adapter    |
+| Auth           | Clerk (`@clerk/nextjs`)         | Proxy-based route protection (`proxy.ts`)   |
+| UI Components  | shadcn/ui (Nova preset)         | Installed into `src/components/ui/`         |
 | Styling        | Tailwind CSS                    | No custom CSS files unless unavoidable      |
 | Icons          | `lucide-react`                  | Consistent icon set                         |
 | Forms          | `react-hook-form` + `zod`       | All forms validated with zod schemas        |
 | State          | React Server Components + hooks | No global state library for MVP             |
-| Toasts         | shadcn `sonner`                 | For action feedback                         |
+| Toasts         | `sonner`                        | For action feedback                         |
 | Date handling  | `date-fns`                      | No moment.js                                |
 | Deployment     | Vercel                          |                                             |
+
+### Key Version Notes
+
+- **Next.js 16**: `middleware.ts` is renamed to `proxy.ts`. The exported function must be named `proxy` or be a default export.
+- **Prisma 7**: The `datasource` block has no `url` property. Connection URL is configured in `prisma.config.ts`. The client engine requires an `adapter` (we use `@prisma/adapter-pg` via `PrismaPg`).
+- **Zod v4**: `error.errors` is renamed to `error.issues`. Use `.issues[0].message` for first error.
+- **Next.js 16 searchParams/params**: These are now `Promise` types in page components and must be awaited.
 
 ---
 
@@ -30,15 +37,16 @@ This document defines the folder structure, naming patterns, component patterns,
 chore-diary/
 ├── prisma/
 │   ├── schema.prisma
-│   ├── seed.ts                      # Default categories, sample recipes
+│   ├── prisma.config.ts             # Prisma 7 config (datasource URL, earlyAccess)
+│   ├── data/
+│   │   └── ingredients.json         # ~150 seed ingredients for autocomplete
 │   └── migrations/
 ├── public/
 │   ├── manifest.json
-│   ├── sw.js                        # Service worker
 │   └── icons/                       # PWA icons
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx               # Root layout: ClerkProvider, ThemeProvider
+│   │   ├── layout.tsx               # Root layout: ClerkProvider, Toaster
 │   │   ├── page.tsx                  # Redirect to /today
 │   │   ├── sign-in/[[...sign-in]]/
 │   │   │   └── page.tsx
@@ -48,66 +56,82 @@ chore-diary/
 │   │   │   └── page.tsx             # Create/join household
 │   │   └── (dashboard)/
 │   │       ├── layout.tsx           # Sidebar/bottom nav, household guard
+│   │       ├── error.tsx            # Error boundary for dashboard routes
 │   │       ├── today/
-│   │       │   └── page.tsx
+│   │       │   ├── page.tsx         # Daily overview (meals, chores, groceries)
+│   │       │   └── loading.tsx
 │   │       ├── chores/
 │   │       │   ├── page.tsx         # Chore list with filters
-│   │       │   └── [id]/
-│   │       │       └── page.tsx     # Edit chore template
+│   │       │   └── loading.tsx
 │   │       ├── meals/
-│   │       │   └── page.tsx         # Weekly meal planner
+│   │       │   ├── page.tsx         # Weekly meal planner
+│   │       │   └── loading.tsx
 │   │       ├── recipes/
-│   │       │   ├── page.tsx         # Recipe list
+│   │       │   ├── page.tsx         # Recipe list with search + tag filtering
+│   │       │   ├── loading.tsx
 │   │       │   ├── new/
 │   │       │   │   └── page.tsx     # Create recipe
 │   │       │   └── [id]/
 │   │       │       └── page.tsx     # Recipe detail / edit
 │   │       ├── groceries/
-│   │       │   └── page.tsx         # Grocery list
+│   │       │   ├── page.tsx         # Grocery list (auto-generated + manual)
+│   │       │   └── loading.tsx
 │   │       └── history/
-│   │           └── page.tsx         # Activity log + stats
+│   │           ├── page.tsx         # Activity log + weekly stats
+│   │           └── loading.tsx
 │   ├── components/
 │   │   ├── ui/                      # shadcn components (auto-generated)
 │   │   ├── layout/
-│   │   │   ├── sidebar.tsx
-│   │   │   ├── bottom-nav.tsx       # Mobile navigation
-│   │   │   └── household-guard.tsx  # Redirects to onboarding if no household
+│   │   │   ├── sidebar.tsx          # Desktop nav + invite code + display name editing
+│   │   │   └── bottom-nav.tsx       # Mobile navigation
 │   │   ├── chores/
-│   │   │   ├── chore-card.tsx
-│   │   │   ├── chore-form.tsx
-│   │   │   └── chore-filters.tsx
+│   │   │   ├── chore-card.tsx       # Optimistic done/skip with useOptimistic
+│   │   │   ├── chore-form.tsx       # react-hook-form + zod
+│   │   │   ├── chore-filters.tsx    # Owner + category client-side filters
+│   │   │   └── chore-list.tsx       # Sections: due today, overdue, upcoming, done
 │   │   ├── meals/
-│   │   │   ├── meal-calendar.tsx
-│   │   │   ├── meal-slot.tsx
-│   │   │   └── meal-form-modal.tsx
+│   │   │   ├── meal-calendar.tsx    # Desktop 7-col grid + mobile vertical list
+│   │   │   ├── meal-slot.tsx        # Empty/filled states, actions dropdown
+│   │   │   └── meal-form-modal.tsx  # Sheet: recipe search or custom meal name
 │   │   ├── recipes/
-│   │   │   ├── recipe-card.tsx
-│   │   │   ├── recipe-form.tsx
-│   │   │   └── ingredient-input.tsx # Structured ingredient row input
+│   │   │   ├── recipe-card.tsx      # Card with name, tags, prep time, servings
+│   │   │   ├── recipe-form.tsx      # Ingredients with useFieldArray
+│   │   │   ├── recipe-actions.tsx   # Edit dialog + delete confirmation
+│   │   │   └── ingredient-input.tsx # Quantity + unit + name row
 │   │   ├── groceries/
-│   │   │   ├── grocery-list.tsx
-│   │   │   ├── grocery-item.tsx
-│   │   │   └── add-grocery-form.tsx
-│   │   └── history/
-│   │       ├── activity-feed.tsx
-│   │       └── stats-cards.tsx
+│   │   │   ├── grocery-list.tsx     # Sections: meal plan, manual, bought
+│   │   │   ├── grocery-item.tsx     # Aggregated + manual item variants
+│   │   │   └── add-grocery-form.tsx # Inline form with ingredient autocomplete
+│   │   ├── shared/
+│   │   │   └── ingredient-name-input.tsx  # Debounced autocomplete for ingredient names
+│   │   ├── today/
+│   │   │   ├── today-meals.tsx      # Lunch/dinner cards with mark-cooked
+│   │   │   ├── today-chores.tsx     # Due + overdue with done/skip
+│   │   │   └── today-groceries.tsx  # Snapshot with mark-bought
+│   │   ├── history/
+│   │   │   ├── activity-feed.tsx    # Paginated feed with type filters
+│   │   │   └── stats-cards.tsx      # Weekly chore/meal/grocery counts
+│   │   └── onboarding/
+│   │       └── onboarding-form.tsx  # Create/join household tabs
 │   ├── lib/
-│   │   ├── db.ts                    # Prisma client singleton
-│   │   ├── auth.ts                  # Clerk helpers: getCurrentUser, requireAuth
-│   │   ├── household.ts            # getHouseholdForUser, requireHousehold
-│   │   └── utils.ts                # cn() helper, date formatters
+│   │   ├── db.ts                    # Prisma client singleton (PrismaPg adapter)
+│   │   ├── auth.ts                  # getCurrentUser (upsert from Clerk), requireAuth
+│   │   ├── household.ts             # getHouseholdForUser, requireHousehold, getHouseholdMembers
+│   │   ├── date.ts                  # toDateOnly (UTC noon), toDateKey
+│   │   └── utils.ts                 # cn() helper (clsx + twMerge)
 │   ├── actions/
-│   │   ├── chores.ts               # Server actions: createChore, completeChore, etc.
-│   │   ├── meals.ts                # Server actions: planMeal, markCooked, etc.
-│   │   ├── recipes.ts             # Server actions: createRecipe, updateRecipe, etc.
-│   │   ├── groceries.ts           # Server actions: generateGroceries, addManualItem, etc.
-│   │   ├── household.ts           # Server actions: createHousehold, joinHousehold
-│   │   └── activity.ts            # Server action: logActivity (internal, called by others)
+│   │   ├── chores.ts               # createChoreTemplate, completeChore, skipChore, generateInstances
+│   │   ├── meals.ts                # planMeal (upsert), markMealCooked, removeMeal, duplicateMeal
+│   │   ├── recipes.ts              # createRecipe, updateRecipe, deleteRecipe, getIngredientSuggestions
+│   │   ├── groceries.ts            # generateGroceryList, addManualItem, toggleChecked, markBought, clearBought
+│   │   ├── household.ts            # createHousehold, joinHousehold
+│   │   ├── user.ts                 # updateDisplayName
+│   │   └── activity.ts             # logActivity (internal, called by other actions)
 │   ├── types/
-│   │   └── index.ts               # Shared TypeScript types and interfaces
-│   └── middleware.ts               # Clerk auth middleware
+│   │   └── index.ts                # Zod schemas + composite Prisma types
+│   └── proxy.ts                    # Clerk auth middleware (Next.js 16 convention)
 ├── .env.local                      # CLERK keys, DATABASE_URL
-├── .env.example                    # Template with placeholder values
+├── prisma.config.ts                # Prisma 7 config
 ├── tailwind.config.ts
 ├── tsconfig.json
 └── package.json
@@ -121,10 +145,10 @@ chore-diary/
 |--------------------|-----------------------|------------------------------------|
 | Files/folders      | kebab-case            | `chore-card.tsx`, `meal-form-modal.tsx` |
 | React components   | PascalCase            | `ChoreCard`, `MealFormModal`       |
-| Server actions     | camelCase verbs       | `createChore`, `completeChore`     |
+| Server actions     | camelCase verbs       | `createChoreTemplate`, `completeChore` |
 | Database fields    | snake_case (Prisma)   | `assigned_user_id`, `due_date`     |
-| TypeScript types   | PascalCase            | `ChoreWithTemplate`, `MealPlanWithRecipe` |
-| Zod schemas        | camelCase + Schema    | `choreFormSchema`, `recipeFormSchema` |
+| TypeScript types   | PascalCase            | `ChoreInstanceWithTemplate`, `MealPlanWithDetails` |
+| Zod schemas        | camelCase + Schema    | `choreTemplateSchema`, `mealPlanSchema` |
 | CSS classes        | Tailwind only         | No custom class names              |
 | Route params       | `[id]`                | `/recipes/[id]/page.tsx`           |
 | Environment vars   | SCREAMING_SNAKE       | `DATABASE_URL`, `CLERK_SECRET_KEY` |
@@ -135,9 +159,9 @@ chore-diary/
 
 ### Server vs Client Components
 
-- **Pages** (`page.tsx`): Server Components by default. Fetch data here.
+- **Pages** (`page.tsx`): Server Components by default. Fetch data here with `Promise.all` for parallel queries.
 - **Interactive components**: Add `"use client"` only when needed (forms, click handlers, state).
-- **Data fetching**: Always in Server Components or Server Actions. Never fetch in client components directly.
+- **Data fetching**: Always in Server Components or Server Actions. Never fetch in client components directly (except for autocomplete/search via server actions).
 
 ### Form Pattern
 
@@ -150,35 +174,32 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  // ...fields
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function ChoreForm({ onSubmit }: { onSubmit: (data: FormValues) => Promise<void> }) {
+export function MyForm({ onSuccess }: { onSuccess?: () => void }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "" },
   });
-  const router = useRouter();
 
-  async function handleSubmit(data: FormValues) {
-    try {
-      await onSubmit(data);
-      toast.success("Chore created");
-      router.refresh();
-    } catch {
-      toast.error("Something went wrong");
+  async function onSubmit(data: FormValues) {
+    const result = await myServerAction(data);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Saved");
+      onSuccess?.();
     }
   }
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)}>
-      {/* Use shadcn Form components */}
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      {/* Fields + submit button */}
     </form>
   );
 }
@@ -220,74 +241,48 @@ export async function completeChore(choreInstanceId: string) {
 }
 ```
 
-### Prisma Client Singleton
+### Prisma Client Singleton (Prisma 7 + pg adapter)
 
 ```tsx
 // src/lib/db.ts
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-export const db = globalForPrisma.prisma || new PrismaClient();
+function createPrismaClient() {
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+  return new PrismaClient({ adapter });
+}
+
+export const db = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 ```
+
+### Date Handling
+
+All dates stored in Prisma `@db.Date` columns use UTC noon to avoid timezone drift:
+
+```tsx
+// src/lib/date.ts
+export function toDateOnly(date: Date) {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+}
+```
+
+Always call `toDateOnly()` when constructing dates for Prisma queries or writes.
 
 ---
 
 ## UI Patterns
 
-### Modal/Dialog
+### Optimistic UI
 
-Use shadcn `Dialog` for create/edit forms:
-
-```tsx
-<Dialog>
-  <DialogTrigger asChild>
-    <Button>Add Chore</Button>
-  </DialogTrigger>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>New Chore</DialogTitle>
-    </DialogHeader>
-    <ChoreForm onSubmit={createChore} />
-  </DialogContent>
-</Dialog>
-```
-
-### Loading States
-
-Use shadcn `Skeleton` for loading states in server components:
-
-```tsx
-// loading.tsx (Next.js convention)
-export default function Loading() {
-  return <Skeleton className="h-[200px] w-full" />;
-}
-```
-
-### Empty States
-
-Every list page must have an empty state:
-
-```tsx
-{items.length === 0 ? (
-  <div className="text-center py-12 text-muted-foreground">
-    <p>No chores yet</p>
-    <Button variant="outline" className="mt-4">Add your first chore</Button>
-  </div>
-) : (
-  <div className="space-y-3">{items.map(...)}</div>
-)}
-```
-
-### One-Tap Actions
-
-Use optimistic updates for completion actions:
+Use `useOptimistic` + `useTransition` for instant feedback on completion actions:
 
 ```tsx
 "use client";
-
 import { useOptimistic, useTransition } from "react";
 
 export function ChoreCard({ chore }) {
@@ -306,11 +301,19 @@ export function ChoreCard({ chore }) {
       onClick={handleComplete}
       disabled={isPending || optimisticStatus === "COMPLETED"}
     >
-      {optimisticStatus === "COMPLETED" ? "Done ✓" : "Mark Done"}
+      {optimisticStatus === "COMPLETED" ? "Done" : "Mark Done"}
     </Button>
   );
 }
 ```
+
+### Loading States
+
+Every dashboard route has a `loading.tsx` using shadcn `Skeleton` components matching the page layout.
+
+### Empty States
+
+Every list page has an empty state with a call-to-action when no data exists.
 
 ---
 
@@ -318,17 +321,15 @@ export function ChoreCard({ chore }) {
 
 ### Desktop: Sidebar
 
-Vertical sidebar with icon + label for each section:
-Today, Chores, Meals, Recipes, Groceries, History.
+Vertical sidebar with icon + label: Today, Chores, Meals, Recipes, Groceries, History. Includes household name, user avatar, display name editing, and invite code with copy button.
 
 ### Mobile: Bottom Navigation Bar
 
-5 tabs max on mobile (combine History into a sub-nav or menu):
-Today, Chores, Meals, Recipes, Groceries.
+5 tabs: Today, Chores, Meals, Recipes, Groceries. History is accessible from the sidebar on desktop only.
 
 Detect screen size with Tailwind breakpoints:
-- `md:` and above → show sidebar, hide bottom nav
-- below `md` → show bottom nav, hide sidebar
+- `md:` and above: show sidebar, hide bottom nav
+- Below `md`: show bottom nav, hide sidebar
 
 ---
 
@@ -353,7 +354,7 @@ const chores = await db.choreInstance.findMany({
 ## Environment Variables
 
 ```bash
-# .env.example
+# .env.local
 DATABASE_URL="postgresql://..."
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
 CLERK_SECRET_KEY="sk_..."
@@ -379,9 +380,11 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/onboarding"
 2. **No `any` types.** Use proper TypeScript types or Prisma generated types.
 3. **All forms use zod validation.** Both client-side and in server actions.
 4. **One-tap actions use optimistic UI.** Completion buttons must feel instant.
-5. **All pages have loading.tsx and empty states.**
+5. **All dashboard routes have loading.tsx and empty states.**
 6. **Mobile-first responsive design.** Build for phone screens first, enhance for desktop.
 7. **Server Actions for mutations, Server Components for reads.**
 8. **revalidatePath after every mutation** to keep the UI in sync.
 9. **Activity logging on every meaningful action.** Call `logActivity()` in every server action that changes state.
 10. **No effort points in MVP.** Track completion counts only.
+11. **Use `toDateOnly()` for all date comparisons** to avoid timezone drift with `@db.Date` columns.
+12. **Await `searchParams` and `params`** in page components (Next.js 16 requirement).

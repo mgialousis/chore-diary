@@ -126,7 +126,7 @@ export async function deleteRecipe(recipeId: string) {
   await logActivity({
     householdId: household.id,
     userId: user.id,
-    eventType: "RECIPE_CREATED",
+    eventType: "RECIPE_DELETED",
     entityType: "recipe",
     entityId: recipeId,
     message: `${user.name} deleted recipe "${existing.name}"`,
