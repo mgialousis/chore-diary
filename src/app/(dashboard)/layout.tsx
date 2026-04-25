@@ -17,6 +17,7 @@ export default async function DashboardLayout({
         userName={user.name}
         userEmail={user.email}
         avatarUrl={user.avatarUrl}
+        userColorPreference={user.colorPreference}
       />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {children}

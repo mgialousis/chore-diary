@@ -175,6 +175,20 @@ export async function updateChoreTemplate(
     },
   });
 
+  // Propagate display fields to all existing instances so past/completed
+  // chores reflect the updated template (assignee chip, name, category).
+  await db.choreInstance.updateMany({
+    where: {
+      choreTemplateId: templateId,
+      householdId: household.id,
+    },
+    data: {
+      name: data.name,
+      category: data.category,
+      assignedUserId: data.assignedUserId,
+    },
+  });
+
   // Delete future pending instances and regenerate
   await db.choreInstance.deleteMany({
     where: {
@@ -226,22 +240,33 @@ export async function toggleChoreTemplateActive(templateId: string) {
 export async function completeChore(choreInstanceId: string): Promise<{ error?: string } | void> {
   const { user, household } = await requireHousehold();
 
+  const existing = await db.choreInstance.findFirst({
+    where: { id: choreInstanceId, householdId: household.id },
+  });
+  if (!existing) return { error: "Chore not found" };
+
+  const creditUserId = existing.assignedUserId ?? user.id;
+  const creditUser =
+    creditUserId === user.id
+      ? user
+      : (await db.user.findUnique({ where: { id: creditUserId } })) ?? user;
+
   const chore = await db.choreInstance.update({
     where: { id: choreInstanceId, householdId: household.id },
     data: {
       status: "COMPLETED",
       completedAt: new Date(),
-      completedByUserId: user.id,
+      completedByUserId: creditUserId,
     },
   });
 
   await logActivity({
     householdId: household.id,
-    userId: user.id,
+    userId: creditUserId,
     eventType: "CHORE_COMPLETED",
     entityType: "chore",
     entityId: chore.id,
-    message: `${user.name} completed ${chore.name}`,
+    message: `${creditUser.name} completed ${chore.name}`,
   });
 
   revalidatePath("/chores");

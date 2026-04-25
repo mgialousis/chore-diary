@@ -32,24 +32,27 @@ import { ChoreFilters, type FilterOwner } from "@/components/chores/chore-filter
 import { deleteChoreTemplate, toggleChoreTemplateActive } from "@/actions/chores";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getUserColorOption } from "@/lib/user-colors";
 import type { ChoreInstanceWithTemplate, ChoreTemplateFormValues, InactiveChoreTemplate } from "@/types";
-import type { HouseholdMember, User } from "@prisma/client";
+import type { HouseholdMember, User, UserColor } from "@prisma/client";
 
 function Section({
   title,
   chores,
   onEdit,
+  memberSummaryById,
 }: {
   title: string;
   chores: ChoreInstanceWithTemplate[];
   onEdit: (chore: ChoreInstanceWithTemplate) => void;
+  memberSummaryById: Map<string, { name: string; colorPreference: UserColor | null }>;
 }) {
   if (chores.length === 0) return null;
   return (
     <section className="space-y-2">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
       {chores.map((c) => (
-        <ChoreCard key={c.id} chore={c} onEdit={onEdit} />
+        <ChoreCard key={c.id} chore={c} onEdit={onEdit} memberSummaryById={memberSummaryById} />
       ))}
     </section>
   );
@@ -141,8 +144,17 @@ function CalendarView({
   onAddForDate: (date: Date) => void;
 }) {
   const router = useRouter();
-  const memberNameById = useMemo(
-    () => new Map(members.map((member) => [member.user.id, member.user.name])),
+  const memberSummaryById = useMemo(
+    () =>
+      new Map(
+        members.map((member) => [
+          member.user.id,
+          {
+            name: member.user.name,
+            colorPreference: member.user.colorPreference,
+          },
+        ]),
+      ),
     [members],
   );
   const monthStart = startOfMonth(month);
@@ -252,11 +264,20 @@ function CalendarView({
                         <p className="truncate text-[10px] text-muted-foreground">
                           {chore.category.replace(/_/g, " ")}
                         </p>
-                        <p className="truncate text-[10px] font-medium text-foreground/70">
-                          {chore.assignedUserId
-                            ? (memberNameById.get(chore.assignedUserId) ?? "Assigned")
-                            : "Unassigned"}
-                        </p>
+                        {chore.assignedUserId ? (
+                          (() => {
+                            const assignee = memberSummaryById.get(chore.assignedUserId);
+                            const colors = getUserColorOption(chore.assignedUserId, assignee?.colorPreference);
+
+                            return (
+                              <span className={cn("truncate rounded-full border px-1.5 py-0.5 text-[10px]", colors.subtle)}>
+                                {assignee?.name.split(" ")[0] ?? "Assigned"}
+                              </span>
+                            );
+                          })()
+                        ) : (
+                          <p className="truncate text-[10px] font-medium text-foreground/70">Unassigned</p>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -304,6 +325,19 @@ export function ChoreList({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [createDate, setCreateDate] = useState<Date>(new Date());
   const router = useRouter();
+  const memberSummaryById = useMemo(
+    () =>
+      new Map(
+        members.map((member) => [
+          member.user.id,
+          {
+            name: member.user.name,
+            colorPreference: member.user.colorPreference,
+          },
+        ]),
+      ),
+    [members],
+  );
 
   const partnerId = members.find((m) => m.user.id !== currentUserId)?.user.id;
 
@@ -335,9 +369,7 @@ export function ChoreList({
         recurrenceType: editingTemplate.recurrenceType,
         recurrenceInterval: editingTemplate.recurrenceInterval,
         daysOfWeek: editingTemplate.daysOfWeek,
-        startDate: editingTemplate.nextDueDate
-          ? new Date(editingTemplate.nextDueDate)
-          : new Date(),
+        startDate: editingChore ? new Date(editingChore.dueDate) : new Date(),
         notes: editingTemplate.notes ?? "",
       }
     : undefined;
@@ -397,10 +429,30 @@ export function ChoreList({
 
           {/* Sections */}
           <div className="space-y-8">
-            <Section title="Due Today" chores={filterChores(dueToday)} onEdit={setEditingChore} />
-            <Section title="Overdue" chores={filterChores(overdue)} onEdit={setEditingChore} />
-            <Section title="Upcoming" chores={filterChores(upcoming)} onEdit={setEditingChore} />
-            <Section title="Recently Done / Skipped" chores={filterChores(recentlyCompleted)} onEdit={setEditingChore} />
+            <Section
+              title="Due Today"
+              chores={filterChores(dueToday)}
+              onEdit={setEditingChore}
+              memberSummaryById={memberSummaryById}
+            />
+            <Section
+              title="Overdue"
+              chores={filterChores(overdue)}
+              onEdit={setEditingChore}
+              memberSummaryById={memberSummaryById}
+            />
+            <Section
+              title="Upcoming"
+              chores={filterChores(upcoming)}
+              onEdit={setEditingChore}
+              memberSummaryById={memberSummaryById}
+            />
+            <Section
+              title="Recently Done / Skipped"
+              chores={filterChores(recentlyCompleted)}
+              onEdit={setEditingChore}
+              memberSummaryById={memberSummaryById}
+            />
             <InactiveSection chores={inactiveTemplates} />
 
             {filterChores([...dueToday, ...overdue, ...upcoming, ...recentlyCompleted]).length === 0 &&
@@ -473,6 +525,7 @@ export function ChoreList({
           {editingChore?.choreTemplate && (
             <>
               <ChoreForm
+                key={`edit-${editingChore.id}-${new Date(editingChore.dueDate).toISOString()}`}
                 members={members}
                 templateId={editingChore.choreTemplate.id}
                 defaultValues={editDefaultValues}

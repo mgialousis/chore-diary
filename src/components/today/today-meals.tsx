@@ -9,6 +9,7 @@ import { markMealCooked } from "@/actions/meals";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getUserColorOption } from "@/lib/user-colors";
 import type { MealPlanWithDetails } from "@/types";
 
 function MealCard({ meal }: { meal: MealPlanWithDetails }) {
@@ -16,6 +17,9 @@ function MealCard({ meal }: { meal: MealPlanWithDetails }) {
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(meal.status);
   const isCooked = optimisticStatus === "COOKED";
   const mealName = meal.recipe?.name ?? meal.customMealName ?? "Meal";
+  const assignedUserColors = meal.assignedTo
+    ? getUserColorOption(meal.assignedTo.id, meal.assignedTo.colorPreference)
+    : null;
 
   function handleCooked() {
     startTransition(async () => {
@@ -44,8 +48,11 @@ function MealCard({ meal }: { meal: MealPlanWithDetails }) {
         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
           {meal.servings} srv
         </span>
-        {meal.assignedTo && (
-          <Badge variant="outline" className="rounded-full border-border/80 py-0 text-[11px]">
+        {meal.assignedTo && assignedUserColors && (
+          <Badge
+            variant="outline"
+            className={cn("rounded-full py-0 text-[11px]", assignedUserColors.pill)}
+          >
             {meal.assignedTo.name.split(" ")[0]}
           </Badge>
         )}

@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Check, Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getUserColorOption } from "@/lib/user-colors";
 import type { ChoreInstanceWithTemplate } from "@/types";
+import type { UserColor } from "@prisma/client";
 import { PostponeChoreDialog } from "@/components/chores/postpone-chore-dialog";
 
 const categoryColors: Record<string, string> = {
@@ -37,9 +39,11 @@ function formatDueDate(date: Date): string {
 export function ChoreCard({
   chore,
   onEdit,
+  memberSummaryById,
 }: {
   chore: ChoreInstanceWithTemplate;
   onEdit: (chore: ChoreInstanceWithTemplate) => void;
+  memberSummaryById: Map<string, { name: string; colorPreference: UserColor | null }>;
 }) {
   const [isPending, startTransition] = useTransition();
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(chore.status);
@@ -50,6 +54,10 @@ export function ChoreCard({
   const isOverdue = isPast(startOfDay(dueDate)) && !isToday(dueDate);
   const isDone = optimisticStatus === "COMPLETED";
   const isSkipped = optimisticStatus === "SKIPPED";
+  const assignee = chore.assignedUserId ? memberSummaryById.get(chore.assignedUserId) : null;
+  const assigneeColors = chore.assignedUserId
+    ? getUserColorOption(chore.assignedUserId, assignee?.colorPreference)
+    : null;
 
   function handleComplete() {
     startTransition(async () => {
@@ -73,7 +81,7 @@ export function ChoreCard({
         <button
           className="flex-1 text-left"
           onClick={() => onEdit(chore)}
-          disabled={isPending || isDone || isSkipped}
+          disabled={isPending}
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className={cn("font-medium", (isDone || isSkipped) && "line-through text-muted-foreground")}>
@@ -98,6 +106,13 @@ export function ChoreCard({
                 ? "Skipped"
               : formatDueDate(dueDate)}
           </p>
+          {assignee && assigneeColors && (
+            <div className="mt-1">
+              <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", assigneeColors.subtle)}>
+                {assignee.name.split(" ")[0]}
+              </span>
+            </div>
+          )}
         </button>
 
         {optimisticStatus === "PENDING" && (

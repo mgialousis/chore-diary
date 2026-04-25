@@ -1,14 +1,16 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { CheckSquare, Check, Clock3, AlertTriangle } from "lucide-react";
+import { CheckSquare, Check, Clock3, AlertTriangle, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isTomorrow } from "date-fns";
 import { completeChore } from "@/actions/chores";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getUserColorOption } from "@/lib/user-colors";
 import type { ChoreInstanceWithTemplate } from "@/types";
+import type { UserColor } from "@prisma/client";
 import { PostponeChoreDialog } from "@/components/chores/postpone-chore-dialog";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -23,6 +25,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   HOUSEHOLD_ADMIN: "bg-slate-100 text-slate-800",
   OTHER: "bg-muted text-muted-foreground",
 };
+
+function getUpcomingLabel(date: Date) {
+  if (isTomorrow(date)) return "Tomorrow";
+  return format(date, "EEE, MMM d");
+}
 
 function ChoreRow({
   chore,
@@ -108,12 +115,57 @@ function ChoreRow({
   );
 }
 
+function UpcomingChoreRow({
+  chore,
+  memberSummaryById,
+}: {
+  chore: ChoreInstanceWithTemplate;
+  memberSummaryById: Record<string, { name: string; colorPreference: UserColor | null }>;
+}) {
+  const name = chore.choreTemplate?.name ?? chore.name;
+  const dueDate = new Date(chore.dueDate);
+  const assignee = chore.assignedUserId ? memberSummaryById[chore.assignedUserId] : null;
+  const assigneeColors = chore.assignedUserId
+    ? getUserColorOption(chore.assignedUserId, assignee?.colorPreference)
+    : null;
+
+  return (
+    <div className="rounded-2xl border bg-background/80 p-3 shadow-sm">
+      <div className="space-y-1.5">
+        <div className="flex items-start justify-between gap-3">
+          <p className="line-clamp-2 text-sm font-semibold tracking-tight">{name}</p>
+          <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-900">
+            {getUpcomingLabel(dueDate)}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="secondary" className={cn("py-0 text-[11px]", CATEGORY_COLORS[chore.category])}>
+            {chore.category.replace(/_/g, " ")}
+          </Badge>
+          {assignee && assigneeColors && (
+            <span className={cn("rounded-full border px-2 py-0.5 text-[11px]", assigneeColors.subtle)}>
+              {assignee.name}
+            </span>
+          )}
+          <span className="text-[11px] text-muted-foreground">
+            {formatDistanceToNow(dueDate, { addSuffix: true })}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TodayChores({
   dueChores,
   overdueChores,
+  upcomingChores,
+  memberSummaryById,
 }: {
   dueChores: ChoreInstanceWithTemplate[];
   overdueChores: ChoreInstanceWithTemplate[];
+  upcomingChores: ChoreInstanceWithTemplate[];
+  memberSummaryById: Record<string, { name: string; colorPreference: UserColor | null }>;
 }) {
   return (
     <div className="space-y-5">
@@ -147,6 +199,27 @@ export function TodayChores({
             {overdueChores.map((chore) => (
               <ChoreRow key={chore.id} chore={chore} overdue />
             ))}
+          </div>
+        </section>
+      )}
+
+      {upcomingChores.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <h2 className="font-semibold">Coming Up</h2>
+              <p className="text-xs text-muted-foreground">
+                A quick look at the next few pending chores.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-3xl border bg-gradient-to-r from-amber-50/70 via-background to-sky-50/70 p-4 shadow-sm">
+            <div className="grid gap-3 md:grid-cols-2">
+              {upcomingChores.map((chore) => (
+                <UpcomingChoreRow key={chore.id} chore={chore} memberSummaryById={memberSummaryById} />
+              ))}
+            </div>
           </div>
         </section>
       )}

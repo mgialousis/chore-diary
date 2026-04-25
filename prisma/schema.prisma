@@ -90,6 +90,15 @@ enum HouseholdRole {
   MEMBER
 }
 
+enum UserColor {
+  ROSE
+  SKY
+  AMBER
+  EMERALD
+  VIOLET
+  SLATE
+}
+
 // ─── MODELS ───────────────────────────────────────────────
 
 model User {
@@ -98,6 +107,7 @@ model User {
   name      String
   email     String   @unique
   avatarUrl String?  @map("avatar_url")
+  colorPreference UserColor? @map("color_preference")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

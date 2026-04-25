@@ -48,32 +48,55 @@ export default async function RecipesPage({
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Recipes</h1>
-        <Button asChild>
-          <Link href="/recipes/new">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New recipe
-          </Link>
-        </Button>
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="rounded-3xl border bg-gradient-to-r from-orange-50 via-background to-amber-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Household cookbook
+            </p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Save your repeat favorites, filter by tags, and build meal plans from a shared recipe library.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="rounded-full px-4">
+            <Link href="/recipes/new">
+              <Plus className="mr-1.5 h-4 w-4" />
+              New recipe
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <form className="flex gap-2" action="/recipes">
+      <div className="rounded-3xl border bg-card/90 p-5 shadow-sm">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Browse recipes
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Search by name or narrow the list to the tags you actually cook with.
+            </p>
+          </div>
+        <form className="flex flex-col gap-2 sm:flex-row" action="/recipes">
           <Input
             name="search"
             defaultValue={search}
             placeholder="Search recipes..."
-            className="max-w-sm"
+            className="sm:max-w-sm"
           />
           {tags && <input type="hidden" name="tags" value={tags} />}
-          <Button type="submit" variant="outline">Search</Button>
+          <div className="flex gap-2">
+            <Button type="submit" variant="outline" className="rounded-full">Search</Button>
           {(search || tagList.length > 0) && (
-            <Button type="button" variant="ghost" asChild>
+            <Button type="button" variant="ghost" className="rounded-full" asChild>
               <Link href="/recipes">Clear</Link>
             </Button>
           )}
+          </div>
         </form>
 
         {allTags.length > 0 && (
@@ -94,17 +117,18 @@ export default async function RecipesPage({
             })}
           </div>
         )}
+        </div>
       </div>
 
       {recipes.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="rounded-3xl border border-dashed bg-muted/20 py-12 text-center text-muted-foreground">
           <p>No recipes saved. Create your first recipe.</p>
           <Button variant="outline" className="mt-4" asChild>
             <Link href="/recipes/new">Add your first recipe</Link>
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}

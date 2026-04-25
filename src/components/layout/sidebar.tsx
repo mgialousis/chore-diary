@@ -13,9 +13,11 @@ import {
   Copy,
   Check,
   Pencil,
+  LogOut,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { SignOutButton } from "@clerk/nextjs";
 import { updateDisplayName } from "@/actions/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +29,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { USER_COLOR_OPTIONS } from "@/lib/user-colors";
+import type { UserColor } from "@prisma/client";
 
 const navItems = [
   { href: "/today", label: "Today", icon: Home },
@@ -44,17 +55,20 @@ export function Sidebar({
   userName,
   userEmail,
   avatarUrl,
+  userColorPreference,
 }: {
   householdName: string;
   inviteCode: string;
   userName: string;
   userEmail: string;
   avatarUrl: string | null;
+  userColorPreference: UserColor | null;
 }) {
   const pathname = usePathname();
   const [copied, setCopied] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [name, setName] = useState(userName);
+  const [colorPreference, setColorPreference] = useState<UserColor>(userColorPreference ?? "SKY");
   const [isPending, startTransition] = useTransition();
 
   function handleCopy() {
@@ -65,7 +79,7 @@ export function Sidebar({
 
   function handleSaveName() {
     startTransition(async () => {
-      const result = await updateDisplayName({ name });
+      const result = await updateDisplayName({ name, colorPreference });
       if (result?.error) {
         toast.error(result.error);
         return;
@@ -103,6 +117,7 @@ export function Sidebar({
               className="h-5 w-5 shrink-0"
               onClick={() => {
                 setName(userName);
+                setColorPreference(userColorPreference ?? "SKY");
                 setEditOpen(true);
               }}
             >
@@ -134,25 +149,33 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t p-4">
-        <p className="text-xs text-muted-foreground mb-1">Invite code</p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono">
-            {inviteCode}
-          </code>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleCopy}
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </Button>
+      <div className="border-t p-4 space-y-3">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Invite code</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono">
+              {inviteCode}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
         </div>
+        <SignOutButton redirectUrl="/sign-in">
+          <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </Button>
+        </SignOutButton>
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -180,6 +203,27 @@ export function Sidebar({
           />
           <p className="text-xs text-muted-foreground">
             This is the account email linked to your profile.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label>Profile color</Label>
+          <Select value={colorPreference} onValueChange={(value) => setColorPreference(value as UserColor)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {USER_COLOR_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-2.5 w-2.5 rounded-full", option.dot)} />
+                    <span>{option.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            This color is used for your assignee chips across meals and chores.
           </p>
         </div>
         <DialogFooter>

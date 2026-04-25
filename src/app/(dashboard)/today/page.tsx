@@ -4,6 +4,7 @@ import { requireHousehold } from "@/lib/household";
 import { TodayChores } from "@/components/today/today-chores";
 import { TodayGroceries } from "@/components/today/today-groceries";
 import { TodayMeals } from "@/components/today/today-meals";
+import { addDays } from "date-fns";
 
 function getGreeting(name: string) {
   const hour = new Date().getHours();
@@ -44,7 +45,8 @@ async function runTodayQuery<T>(label: string, query: () => Promise<T>) {
 export default async function TodayPage() {
   const { user, household } = await requireHousehold();
   const today = toDateOnly(new Date());
-  const [todayMeals, dueChores, overdueChores, groceryItems] = await Promise.all([
+  const upcomingWindowEnd = toDateOnly(addDays(today, 4));
+  const [todayMeals, dueChores, overdueChores, upcomingChores, groceryItems, householdMembers] = await Promise.all([
     runTodayQuery("todayMeals", () =>
       db.mealPlan.findMany({
         where: { householdId: household.id, date: today },
@@ -63,13 +65,42 @@ export default async function TodayPage() {
         include: { choreTemplate: true, completedBy: true },
         orderBy: { dueDate: "asc" },
       })),
+    runTodayQuery("upcomingChores", () =>
+      db.choreInstance.findMany({
+        where: {
+          householdId: household.id,
+          dueDate: {
+            gt: today,
+            lte: upcomingWindowEnd,
+          },
+          status: "PENDING",
+        },
+        include: { choreTemplate: true, completedBy: true },
+        orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+        take: 8,
+      })),
     runTodayQuery("groceryItems", () =>
       db.groceryItem.findMany({
         where: { householdId: household.id, status: "NEEDED", checked: false },
         orderBy: [{ category: "asc" }, { createdAt: "desc" }],
         take: 10,
       })),
+    runTodayQuery("householdMembers", () =>
+      db.householdMember.findMany({
+        where: { householdId: household.id },
+        include: { user: true },
+        orderBy: { joinedAt: "asc" },
+      })),
   ]);
+  const memberSummaryById = Object.fromEntries(
+    householdMembers.map((member) => [
+      member.userId,
+      {
+        name: member.user.name.split(" ")[0] ?? member.user.name,
+        colorPreference: member.user.colorPreference,
+      },
+    ]),
+  );
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -86,7 +117,12 @@ export default async function TodayPage() {
       </div>
 
       <TodayMeals meals={todayMeals} />
-      <TodayChores dueChores={dueChores} overdueChores={overdueChores} />
+      <TodayChores
+        dueChores={dueChores}
+        overdueChores={overdueChores}
+        upcomingChores={upcomingChores}
+        memberSummaryById={memberSummaryById}
+      />
       <TodayGroceries items={groceryItems} />
     </div>
   );

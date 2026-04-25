@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -56,10 +57,8 @@ export function ChoreForm({
 }) {
   const router = useRouter();
   const isEditing = !!templateId;
-
-  const form = useForm<ChoreTemplateFormValues>({
-    resolver: zodResolver(choreTemplateSchema),
-    defaultValues: {
+  const resolvedDefaultValues = useMemo<ChoreTemplateFormValues>(
+    () => ({
       name: "",
       category: "OTHER",
       assignedUserId: null,
@@ -69,8 +68,18 @@ export function ChoreForm({
       startDate: new Date(),
       notes: "",
       ...defaultValues,
-    },
+    }),
+    [defaultValues],
+  );
+
+  const form = useForm<ChoreTemplateFormValues>({
+    resolver: zodResolver(choreTemplateSchema),
+    defaultValues: resolvedDefaultValues,
   });
+
+  useEffect(() => {
+    form.reset(resolvedDefaultValues);
+  }, [form, resolvedDefaultValues]);
 
   const recurrenceType = useWatch({
     control: form.control,
