@@ -68,7 +68,6 @@ export default async function ChoresPage({
       db.choreInstance.findMany({
         where: {
           householdId: household.id,
-          status: "PENDING",
           dueDate: {
             gte: toDateOnly(calendarMonthStart),
             lte: toDateOnly(calendarMonthEnd),

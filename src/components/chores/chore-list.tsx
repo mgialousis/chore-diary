@@ -215,7 +215,8 @@ function CalendarView({
           {days.map((day) => {
             const dayChores = getChoresForDay(day);
             const inMonth = isSameMonth(day, monthStart);
-            const overdue = isPast(startOfDay(day)) && !isToday(day) && dayChores.length > 0;
+            const hasPending = dayChores.some((c) => c.status === "PENDING");
+            const overdue = isPast(startOfDay(day)) && !isToday(day) && hasPending;
 
             return (
               <div
@@ -253,34 +254,52 @@ function CalendarView({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  {dayChores.slice(0, 3).map((chore) => (
-                    <button
-                      key={chore.id}
-                      className="w-full rounded-xl border border-border/70 bg-muted/30 px-2 py-1.5 text-left transition-colors hover:bg-muted"
-                      onClick={() => onEdit(chore)}
-                    >
-                      <p className="truncate text-xs font-medium">{chore.name}</p>
-                      <div className="mt-0.5 flex items-center justify-between gap-2">
-                        <p className="truncate text-[10px] text-muted-foreground">
-                          {chore.category.replace(/_/g, " ")}
-                        </p>
-                        {chore.assignedUserId ? (
-                          (() => {
-                            const assignee = memberSummaryById.get(chore.assignedUserId);
-                            const colors = getUserColorOption(chore.assignedUserId, assignee?.colorPreference);
+                  {dayChores.slice(0, 3).map((chore) => {
+                    const isDone = chore.status === "COMPLETED";
+                    const isSkipped = chore.status === "SKIPPED";
+                    const isInactive = isDone || isSkipped;
 
-                            return (
-                              <span className={cn("truncate rounded-full border px-1.5 py-0.5 text-[10px]", colors.subtle)}>
-                                {assignee?.name.split(" ")[0] ?? "Assigned"}
-                              </span>
-                            );
-                          })()
-                        ) : (
-                          <p className="truncate text-[10px] font-medium text-foreground/70">Unassigned</p>
+                    return (
+                      <button
+                        key={chore.id}
+                        className={cn(
+                          "w-full rounded-xl border px-2 py-1.5 text-left transition-colors",
+                          isInactive
+                            ? "border-border/50 bg-muted/10 opacity-60 hover:bg-muted/20"
+                            : "border-border/70 bg-muted/30 hover:bg-muted",
                         )}
-                      </div>
-                    </button>
-                  ))}
+                        onClick={() => onEdit(chore)}
+                      >
+                        <p
+                          className={cn(
+                            "truncate text-xs font-medium",
+                            isInactive && "line-through text-muted-foreground",
+                          )}
+                        >
+                          {chore.name}
+                        </p>
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                          <p className="truncate text-[10px] text-muted-foreground">
+                            {isDone ? "Done" : isSkipped ? "Skipped" : chore.category.replace(/_/g, " ")}
+                          </p>
+                          {chore.assignedUserId ? (
+                            (() => {
+                              const assignee = memberSummaryById.get(chore.assignedUserId);
+                              const colors = getUserColorOption(chore.assignedUserId, assignee?.colorPreference);
+
+                              return (
+                                <span className={cn("truncate rounded-full border px-1.5 py-0.5 text-[10px]", colors.subtle)}>
+                                  {assignee?.name.split(" ")[0] ?? "Assigned"}
+                                </span>
+                              );
+                            })()
+                          ) : (
+                            <p className="truncate text-[10px] font-medium text-foreground/70">Unassigned</p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                   {dayChores.length > 3 && (
                     <p className="px-1 text-[10px] font-medium text-muted-foreground">
                       +{dayChores.length - 3} more
