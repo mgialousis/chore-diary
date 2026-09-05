@@ -5,30 +5,12 @@ import { requireHousehold } from "@/lib/household";
 import { logActivity } from "@/actions/activity";
 import { choreTemplateSchema, type ChoreTemplateFormValues } from "@/types";
 import { toDateOnly } from "@/lib/date";
+import { calculateChoreSchedule } from "@/domain/chore-schedule";
 import { revalidatePath } from "next/cache";
-import { addDays, differenceInCalendarDays, getDay } from "date-fns";
+import { addDays } from "date-fns";
 import type { ChoreTemplate } from "@prisma/client";
 
 // ─── Instance Generation ────────────────────────────────────
-
-function getIntervalAlignedDate(anchor: Date, from: Date, stepDays: number) {
-  if (anchor >= from) return anchor;
-
-  const daysSinceAnchor = differenceInCalendarDays(from, anchor);
-  const stepsToAdvance = Math.ceil(daysSinceAnchor / stepDays);
-
-  return addDays(anchor, stepsToAdvance * stepDays);
-}
-
-function getNextSpecificDayAfter(date: Date, daysOfWeek: number[]) {
-  let candidate = addDays(date, 1);
-
-  while (!daysOfWeek.includes(getDay(candidate))) {
-    candidate = addDays(candidate, 1);
-  }
-
-  return candidate;
-}
 
 async function generateChoreInstances(template: ChoreTemplate) {
   const today = toDateOnly(new Date());
@@ -37,68 +19,14 @@ async function generateChoreInstances(template: ChoreTemplate) {
     template.nextDueDate ? new Date(template.nextDueDate) : today,
   );
 
-  const dueDates: Date[] = [];
-  let nextDueDate: Date | null = template.nextDueDate
-    ? toDateOnly(new Date(template.nextDueDate))
-    : null;
-
-  switch (template.recurrenceType) {
-    case "NONE": {
-      // Only create one instance (on nextDueDate / startDate)
-      if (startDate >= today && startDate <= horizon) {
-        dueDates.push(startDate);
-      }
-      nextDueDate = dueDates.length > 0 ? null : startDate;
-      break;
-    }
-    case "DAILY": {
-      let d = getIntervalAlignedDate(startDate, today, 1);
-      while (d <= horizon) {
-        dueDates.push(d);
-        d = addDays(d, 1);
-      }
-      nextDueDate = d;
-      break;
-    }
-    case "EVERY_N_DAYS": {
-      const interval = template.recurrenceInterval ?? 1;
-      let d = getIntervalAlignedDate(startDate, today, interval);
-      while (d <= horizon) {
-        dueDates.push(d);
-        d = addDays(d, interval);
-      }
-      nextDueDate = d;
-      break;
-    }
-    case "WEEKLY": {
-      let d = getIntervalAlignedDate(startDate, today, 7);
-      while (d <= horizon) {
-        dueDates.push(d);
-        d = addDays(d, 7);
-      }
-      nextDueDate = d;
-      break;
-    }
-    case "SPECIFIC_DAYS": {
-      const days = template.daysOfWeek;
-      if (days.length === 0) {
-        return;
-      }
-
-      let d = startDate < today ? today : startDate;
-      while (d <= horizon) {
-        if (days.includes(getDay(d))) {
-          dueDates.push(d);
-        }
-        d = addDays(d, 1);
-      }
-      nextDueDate =
-        dueDates.length > 0
-          ? getNextSpecificDayAfter(dueDates[dueDates.length - 1], days)
-          : startDate;
-      break;
-    }
-  }
+  const { dueDates, nextDueDate } = calculateChoreSchedule({
+    recurrenceType: template.recurrenceType,
+    recurrenceInterval: template.recurrenceInterval,
+    daysOfWeek: template.daysOfWeek,
+    startDate,
+    today,
+    horizon,
+  });
 
   if (dueDates.length === 0) return;
 
