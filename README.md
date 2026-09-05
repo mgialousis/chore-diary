@@ -4,6 +4,15 @@
 
 Chore Diary is a responsive household planner that keeps recurring chores, weekly meals, recipes, and groceries in one shared workspace. It turns a meal plan into an actionable grocery list and records household activity, so two people can coordinate without switching between several apps.
 
+## Preview
+
+![Today dashboard with a fictional household](docs/screenshots/01-today-desktop.png)
+
+[Product walkthrough and narrow-screen preview](docs/WALKTHROUGH.md).
+These are real component renders with synthetic data, not a live household.
+Try the read-only UI locally with `npm ci` followed by `npm run preview:ui`;
+no database, Clerk account, or credentials are needed for that preview.
+
 ## Product highlights
 
 - A focused Today dashboard for due and overdue chores, meals, and groceries
@@ -50,7 +59,8 @@ Pages fetch household data on the server. Interactive forms submit to Server Act
 
 ## Run locally
 
-Prerequisites: Node.js 22, a PostgreSQL database, and a Clerk application.
+Prerequisites: Node.js 22.18 or newer within the 22.x line (for native TypeScript
+seed execution), a PostgreSQL database, and a Clerk application.
 
 ```bash
 git clone https://github.com/mgialousis/chore-diary.git
@@ -62,10 +72,16 @@ cp .env.example .env.local
 Replace the placeholder values in `.env.local`, then prepare the database and start the app:
 
 ```bash
+npx prisma generate
 npx prisma migrate deploy
 npx prisma db seed
 npm run dev
 ```
+
+Both Next.js and the Prisma CLI load `.env.local`. Shell/CI environment variables
+take precedence; you do not need to duplicate credentials in `.env`.
+Seeding validates the ingredient catalog; creating demo household records is
+optional (see the local-development guide).
 
 Open [http://localhost:3000](http://localhost:3000). More detail about database connections, optional demo seeding, and local tooling is in [docs/LOCAL_DEVELOPMENT.md](./docs/LOCAL_DEVELOPMENT.md).
 
@@ -99,7 +115,9 @@ npm test
 npm run build
 ```
 
-The test suite covers recurrence scheduling edge cases and core validation rules. GitHub Actions runs the same checks for pushes and pull requests using explicit non-production placeholder configuration.
+The test suite covers recurrence scheduling edge cases, core validation rules,
+and Prisma environment-file precedence. GitHub Actions runs the same checks for
+pushes and pull requests using explicit non-production placeholder configuration.
 
 ## Further documentation
 
