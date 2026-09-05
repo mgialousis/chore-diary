@@ -107,3 +107,18 @@ The test suite covers recurrence scheduling edge cases and core validation rules
 - [Implementation guide](./IMPLEMENTATION_GUIDE.md)
 - [Project conventions](./CONVENTIONS.md)
 - [Repository-specific agent guidance](./AGENTS.md)
+
+## License
+
+Copyright (C) 2026 Miltiadis Gialousis.
+
+This project's original code and content are licensed under the
+[GNU Affero General Public License version 3 only](LICENSE)
+(`AGPL-3.0-only`). You may use, modify, and redistribute them, including
+commercially, under the license's terms. Distributed covered works must
+provide corresponding source under those terms. If you modify the software
+and let users interact with it remotely over a network, you must offer those
+users the corresponding source of your modified version.
+
+The software is provided without warranty. Third-party dependencies and any
+separately licensed material retain their respective licenses and notices.
